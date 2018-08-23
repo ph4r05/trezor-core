@@ -6,6 +6,8 @@ from trezor.messages.MessageType import (
     MoneroGetAddress,
     MoneroGetWatchKey,
     MoneroKeyImageSyncRequest,
+    MoneroLiteInitRequest,
+    MoneroLiteRequest,
     MoneroTransactionSignRequest,
 )
 from trezor.wire import protobuf_workflow, register
@@ -16,6 +18,7 @@ class Holder(object):
     def __init__(self):
         self.ctx_sign = None
         self.ctx_ki = None
+        self.ctx_lite = None
 
 
 STATE = Holder()
@@ -45,6 +48,18 @@ def dispatch_MoneroKeyImageSync(*args, **kwargs):
     return layout_key_image_sync(STATE, *args, **kwargs)
 
 
+def dispatch_MoneroLiteInitRequest(*args, **kwargs):
+    from apps.monero.lite_protocol import layout_lite_init_protocol
+
+    return layout_lite_init_protocol(STATE, *args, **kwargs)
+
+
+def dispatch_MoneroLiteRequest(*args, **kwargs):
+    from apps.monero.lite_protocol import layout_lite_protocol
+
+    return layout_lite_protocol(STATE, *args, **kwargs)
+
+
 def dispatch_MoneroDiag(*args, **kwargs):
     log.debug(__name__, "----diagnostics")
     gc.collect()
@@ -58,4 +73,6 @@ def boot():
     register(MoneroGetWatchKey, protobuf_workflow, dispatch_MoneroGetWatchKey)
     register(MoneroTransactionSignRequest, protobuf_workflow, dispatch_MoneroTsxSign)
     register(MoneroKeyImageSyncRequest, protobuf_workflow, dispatch_MoneroKeyImageSync)
+    register(MoneroLiteInitRequest, protobuf_workflow, dispatch_MoneroLiteInitRequest)
+    register(MoneroLiteRequest, protobuf_workflow, dispatch_MoneroLiteRequest)
     register(DebugMoneroDiagRequest, protobuf_workflow, dispatch_MoneroDiag)
