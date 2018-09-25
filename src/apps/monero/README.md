@@ -172,6 +172,8 @@ to the agent/hot-wallet so it can decrypt computed KIs and import it
 
 For detailed description and rationale please refer to the [monero-doc].
 
+TODO
+
 - The wrapping message: `MoneroTransactionSignRequest`.
 - The main multiplexor: `apps/monero/protocol/tsx_sign.py`
 - The main signing logic is implemented in `apps/monero/protocol/tsx_sign_builder.py`
