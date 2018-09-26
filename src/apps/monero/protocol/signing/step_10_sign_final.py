@@ -38,8 +38,6 @@ async def final_msg(state: State):
     await confirms.transaction_finished(state.ctx)
     gc.collect()
 
-    del state  # todo ?
-
     return MoneroTransactionFinalAck(
         cout_key=cout_key, salt=salt, rand_mult=rand_mult, tx_enc_keys=tx_enc_keys
     )

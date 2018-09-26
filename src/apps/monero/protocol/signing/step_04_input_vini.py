@@ -12,12 +12,7 @@ from apps.monero.xmr import common, crypto, monero
 
 
 async def input_vini(
-    state: State,
-    src_entr,
-    vini_bin,
-    hmac,
-    pseudo_out,
-    pseudo_out_hmac,
+    state: State, src_entr, vini_bin, hmac, pseudo_out, pseudo_out_hmac
 ):
     from trezor.messages.MoneroTransactionInputViniAck import (
         MoneroTransactionInputViniAck
@@ -41,15 +36,12 @@ async def input_vini(
 
     hash_vini_pseudo_out(state, vini_bin, state.inp_idx, pseudo_out, pseudo_out_hmac)
 
-    return await dispatch_and_forward(state, MoneroTransactionInputViniAck())
+    # TODO check input count?
+    return MoneroTransactionInputViniAck()
 
 
 def hash_vini_pseudo_out(
-    state: State,
-    vini_bin,
-    inp_idx,
-    pseudo_out=None,
-    pseudo_out_hmac=None,
+    state: State, vini_bin, inp_idx, pseudo_out=None, pseudo_out_hmac=None
 ):
     """
     Incremental hasing of tx.vin[i] and pseudo output
@@ -68,31 +60,3 @@ def hash_vini_pseudo_out(
         raise ValueError("HMAC invalid for pseudo outs")
 
     state.full_message_hasher.set_pseudo_out(pseudo_out)
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_05_all_in_set
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read(
-        (
-            MessageType.MoneroTransactionInputViniRequest,
-            MessageType.MoneroTransactionAllInputsSetRequest,
-        )
-    )
-    # todo check input count
-
-    if received_msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionInputViniRequest:
-        return await input_vini(
-            state,
-            received_msg.src_entr,
-            received_msg.vini,
-            received_msg.vini_hmac,
-            received_msg.pseudo_out,
-            received_msg.pseudo_out_hmac,
-        )
-
-    return await step_05_all_in_set.all_in_set(state, received_msg.rsig_data)

@@ -14,9 +14,7 @@ from apps.monero.protocol import hmac_encryption_keys
 from apps.monero.xmr import common, crypto
 
 
-async def set_out1(
-    state: State, dst_entr, dst_entr_hmac, rsig_data=None
-):
+async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     state._mem_trace(0, True)
     mods = utils.unimport_begin()
 
@@ -103,14 +101,13 @@ async def set_out1(
     utils.memcpy(out_pk_bin, 0, out_pk.dest, 0, 32)
     utils.memcpy(out_pk_bin, 32, out_pk.mask, 0, 32)
 
-    result = MoneroTransactionSetOutputAck(
+    return MoneroTransactionSetOutputAck(
         tx_out=tx_out_bin,
         vouti_hmac=hmac_vouti,
         rsig_data=_return_rsig_data(state, rsig),
         out_pk=out_pk_bin,
         ecdh_info=ecdh_info_bin,
     )
-    return await dispatch_and_forward(state, result)
 
 
 async def _set_out1_tx_out(state: State, dst_entr, tx_out_key):
@@ -239,9 +236,7 @@ def _return_rsig_data(state, rsig):
         return MoneroTransactionRsigData(rsig=rsig)
 
 
-def _set_out1_ecdh(
-    state: State, dest_pub_key, amount, mask, amount_key
-):
+def _set_out1_ecdh(state: State, dest_pub_key, amount, mask, amount_key):
     from apps.monero.xmr import ring_ct
 
     # Mask sum
@@ -294,9 +289,7 @@ def _set_out1_additional_keys(state: State, dst_entr):
     return additional_txkey_priv
 
 
-def _set_out1_derivation(
-    state: State, dst_entr, additional_txkey_priv
-):
+def _set_out1_derivation(state: State, dst_entr, additional_txkey_priv):
     from apps.monero.xmr.sub.addr import addr_eq
 
     change_addr = state.change_address()
@@ -359,28 +352,3 @@ def _get_out_mask(state: State, idx):
             return crypto.sc_sub(state.sumpouts_alphas, state.sumout)
         else:
             return crypto.random_scalar()
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_07_all_out1_set
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read(
-        (
-            MessageType.MoneroTransactionSetOutputRequest,
-            MessageType.MoneroTransactionAllOutSetRequest,
-        )
-    )
-
-    if received_msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSetOutputRequest:
-        return await set_out1(
-            state,
-            received_msg.dst_entr,
-            received_msg.dst_entr_hmac,
-            received_msg.rsig_data,
-        )
-
-    return await step_07_all_out1_set.all_out1_set(state)
