@@ -85,10 +85,9 @@ async def all_out1_set(state: State):
         rv_type=state.get_rct_type(),
     )
 
-    result = MoneroTransactionAllOutSetAck(
+    return MoneroTransactionAllOutSetAck(
         extra=extra_b, tx_prefix_hash=state.tx_prefix_hash, rv=rv_pb
     )
-    return await dispatch_and_forward(state, result)
 
 
 def _set_tx_extra(state: State):
@@ -114,14 +113,3 @@ def _set_tx_prefix(state: State):
 
     # Hash message to the final_message
     state.full_message_hasher.set_message(state.tx_prefix_hash)
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_08_mlsag_done
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    await state.ctx.read((MessageType.MoneroTransactionMlsagDoneRequest,))
-    return await step_08_mlsag_done.mlsag_done(state)

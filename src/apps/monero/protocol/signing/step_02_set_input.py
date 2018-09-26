@@ -106,7 +106,11 @@ async def set_input(state: State, src_entr):
         crypto.encodeint(xi),
     )
 
-    result_msg = MoneroTransactionSetInputAck(
+    # All inputs done?
+    if state.inp_idx + 1 == state.num_inputs():
+        tsx_inputs_done(state)
+
+    return MoneroTransactionSetInputAck(
         vini=vini_bin,
         vini_hmac=hmac_vini,
         pseudo_out=pseudo_out,
@@ -115,44 +119,16 @@ async def set_input(state: State, src_entr):
         spend_enc=spend_enc,
     )
 
-    # All inputs done?
-    if state.inp_idx + 1 != state.num_inputs():
-        return await dispatch_and_next_input(
-            state, result_msg
-        )  # todo: we can merge those two functions
 
-    return await dispatch_and_forward(state, result_msg)
-
-
-async def dispatch_and_next_input(state, result_msg):
-    from trezor.messages import MessageType
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read((MessageType.MoneroTransactionSetInputRequest,))
-    return await set_input(state, received_msg.src_entr)
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_03_inputs_permutation
-
+def tsx_inputs_done(state: State):
     """
     All inputs set
     """
-    state.subaddresses = None  # todo why?
+    # self.state.input_done()
+    state.subaddresses = None  # TODO why? remove this?
 
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read(
-        (MessageType.MoneroTransactionInputsPermutationRequest,)
-    )
-
-    return await step_03_inputs_permutation.tsx_inputs_permutation(
-        state, received_msg.perm
-    )
+    if state.inp_idx + 1 != state.num_inputs():
+        raise ValueError("Input count mismatch")
 
 
 def _gen_commitment(state: State, in_amount):

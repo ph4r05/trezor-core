@@ -10,12 +10,11 @@ from apps.monero.protocol.signing.state import State
 from apps.monero.xmr import common, crypto, monero
 
 
-async def init_transaction(ctx, address_n, network_type, tsx_data):
+async def init_transaction(state: State, address_n, network_type, tsx_data):
     from apps.monero.xmr.sub.addr import classify_subaddresses
     from apps.monero.protocol import hmac_encryption_keys
 
-    state = State(ctx)
-    state.creds = await misc.monero_get_creds(ctx, address_n, network_type)
+    state.creds = await misc.monero_get_creds(state.ctx, address_n, network_type)
 
     state.tx_priv = crypto.random_scalar()
     state.tx_pub = crypto.scalarmult_base(state.tx_priv)
@@ -111,26 +110,13 @@ async def init_transaction(ctx, address_n, network_type, tsx_data):
 
     rsig_data = MoneroTransactionRsigData(offload_type=state.rsig_offload)
 
-    result_msg = MoneroTransactionInitAck(
+    return MoneroTransactionInitAck(
         in_memory=False,
         many_inputs=True,
         many_outputs=True,
         hmacs=hmacs,
         rsig_data=rsig_data,
     )
-    return await dispatch_and_forward(state, result_msg)
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_02_set_input
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read((MessageType.MoneroTransactionSetInputRequest,))
-
-    return await step_02_set_input.set_input(state, received_msg.src_entr)
 
 
 def get_primary_change_address(state: State):

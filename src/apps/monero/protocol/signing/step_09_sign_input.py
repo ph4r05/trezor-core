@@ -195,36 +195,6 @@ async def sign_input(
         MoneroTransactionSignInputAck
     )
 
-    result = MoneroTransactionSignInputAck(
+    return MoneroTransactionSignInputAck(
         signature=misc.dump_msg_gc(mgs[0], preallocate=488, del_msg=True), cout=cout
     )
-    return await dispatch_and_forward(state, result)
-
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_10_sign_final
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read(
-        (
-            MessageType.MoneroTransactionSignInputRequest,
-            MessageType.MoneroTransactionFinalRequest,
-        )
-    )
-
-    if received_msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSignInputRequest:
-        return await sign_input(
-            state,
-            received_msg.src_entr,
-            received_msg.vini,
-            received_msg.vini_hmac,
-            received_msg.pseudo_out,
-            received_msg.pseudo_out_hmac,
-            received_msg.alpha_enc,
-            received_msg.spend_enc,
-        )
-
-    return await step_10_sign_final.final_msg(state)

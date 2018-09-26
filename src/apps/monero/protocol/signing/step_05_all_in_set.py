@@ -27,7 +27,7 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
     resp = MoneroTransactionAllInputsSetAck(rsig_data=rsig_data)
 
     if not state.rsig_offload:
-        return await dispatch_and_forward(state, resp)
+        return resp
 
     # Simple offloading - generate random masks that sum to the input mask sum.
     tmp_buff = bytearray(32)
@@ -48,19 +48,5 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
 
     state.assrt(crypto.sc_eq(state.sumout, state.sumpouts_alphas), "Invalid masks sum")
     state.sumout = crypto.sc_init(0)
-    return await dispatch_and_forward(state, resp)
 
-
-async def dispatch_and_forward(state, result_msg):
-    from trezor.messages import MessageType
-    from apps.monero.protocol.signing import step_06_set_out1
-
-    await state.ctx.write(result_msg)
-    del result_msg
-
-    received_msg = await state.ctx.read(
-        (MessageType.MoneroTransactionSetOutputRequest,)
-    )
-    return await step_06_set_out1.set_out1(
-        state, received_msg.dst_entr, received_msg.dst_entr_hmac, received_msg.rsig_data
-    )
+    return resp
