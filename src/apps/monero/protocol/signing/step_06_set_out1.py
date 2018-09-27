@@ -328,7 +328,7 @@ def _is_last_in_batch(state: State, idx, bidx=None):
     """
     Returns true if the current output is last in the rsig batch
     """
-    bidx = _get_rsig_batch(idx) if bidx is None else bidx
+    bidx = _get_rsig_batch(state, idx) if bidx is None else bidx
     batch_size = state.rsig_grp[bidx]
     return (idx - sum(state.rsig_grp[:bidx])) + 1 == batch_size
 
