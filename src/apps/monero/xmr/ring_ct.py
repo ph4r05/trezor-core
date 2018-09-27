@@ -53,6 +53,15 @@ def verify_bp(bp_proof, amounts=None, masks=None):
 
 
 def prove_range_chunked(amount, last_mask=None):
+    # The large chunks allocated first to avoid potential memory fragmentation issues.
+    ai = bytearray(32 * 64)
+    alphai = bytearray(32 * 64)
+    Cis = bytearray(32 * 64)
+    s0s = bytearray(32 * 64)
+    s1s = bytearray(32 * 64)
+    buff = bytearray(32)
+    ee_bin = bytearray(32)
+
     a = crypto.sc_init(0)
     si = crypto.sc_init(0)
     c = crypto.sc_init(0)
@@ -66,15 +75,6 @@ def prove_range_chunked(amount, last_mask=None):
     L = crypto.identity()
     Zero = crypto.identity()
     kck = crypto.get_keccak()
-
-    ai = bytearray(32 * 64)
-    alphai = bytearray(32 * 64)
-    buff = bytearray(32)
-
-    Cis = bytearray(32 * 64)
-    s0s = bytearray(32 * 64)
-    s1s = bytearray(32 * 64)
-    ee_bin = bytearray(32)
 
     for ii in range(64):
         crypto.random_scalar(tmp_ai)
