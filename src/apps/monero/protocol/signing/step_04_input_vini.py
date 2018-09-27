@@ -8,7 +8,7 @@ from .state import State
 
 from apps.monero.layout import confirms
 from apps.monero.protocol import hmac_encryption_keys
-from apps.monero.xmr import common, crypto, monero
+from apps.monero.xmr import common, crypto
 
 
 async def input_vini(

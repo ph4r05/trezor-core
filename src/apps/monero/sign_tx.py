@@ -2,6 +2,7 @@ import gc
 
 from trezor import log, utils
 from trezor.messages import MessageType
+
 from apps.monero.protocol.signing.state import State
 
 

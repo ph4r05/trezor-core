@@ -80,9 +80,7 @@ async def all_out1_set(state: State):
 
     # Initializes RCTsig structure (fee, tx prefix hash, type)
     rv_pb = MoneroRingCtSig(
-        txn_fee=state.fee,
-        message=state.tx_prefix_hash,
-        rv_type=state.get_rct_type(),
+        txn_fee=state.fee, message=state.tx_prefix_hash, rv_type=state.get_rct_type()
     )
 
     return MoneroTransactionAllOutSetAck(

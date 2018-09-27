@@ -6,7 +6,6 @@ from trezor.crypto.hashlib import sha256
 
 from .consts import *
 
-from apps.monero.controller import misc
 from apps.monero.layout import confirms
 from apps.monero.xmr import common, crypto, monero
 from apps.monero.xmr.enc import aescbc
@@ -568,11 +567,17 @@ class LiteProtocol:
         return SW_OK
 
     async def _req_dst(self, Aout, Bout, amount, is_sub=False):
-        from trezor.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
-        from trezor.messages.MoneroTransactionDestinationEntry import MoneroTransactionDestinationEntry
+        from trezor.messages.MoneroAccountPublicAddress import (
+            MoneroAccountPublicAddress
+        )
+        from trezor.messages.MoneroTransactionDestinationEntry import (
+            MoneroTransactionDestinationEntry
+        )
 
         addr = MoneroAccountPublicAddress(view_public_key=Aout, spend_public_key=Bout)
-        out = MoneroTransactionDestinationEntry(addr=addr, amount=amount, is_subaddress=is_sub)
+        out = MoneroTransactionDestinationEntry(
+            addr=addr, amount=amount, is_subaddress=is_sub
+        )
         await self.iface.confirm_out(out, False, self.creds, self.ctx)
 
     async def mlsag_prehash_finalize(self):
