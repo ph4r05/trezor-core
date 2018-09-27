@@ -157,7 +157,7 @@ async def sign_input(
             mix_ring,
             [in_sk],
             state.output_sk_masks,
-            state.output_pk,
+            state.output_pk_masks,
             kLRki,
             None,
             index,

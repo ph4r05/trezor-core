@@ -90,7 +90,7 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
 
     # Output_pk is stored to the state as it is used during the signature and hashed to the
     # RctSigBase later.
-    state.output_pk.append(out_pk)
+    state.output_pk_masks.append(out_pk.mask)
     state.mem_trace(14, True)
 
     from trezor.messages.MoneroTransactionSetOutputAck import (

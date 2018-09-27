@@ -57,7 +57,7 @@ class State:
         self.input_alphas = []
         self.input_pseudo_outs = []
         self.output_sk_masks = []
-        self.output_pk = []
+        self.output_pk_masks = []  # commitments
         self.output_amounts = []
         self.output_masks = []
         self.rsig_type = 0
