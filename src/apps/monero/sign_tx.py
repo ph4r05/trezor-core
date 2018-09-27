@@ -6,32 +6,22 @@ from apps.monero.protocol.signing.state import State
 
 
 async def sign_tx(ctx, received_msg):
-    gc.collect()
-    mods = utils.unimport_begin()
     state = State(ctx)
 
     while True:
         if __debug__:
             log.debug(__name__, "#### F: %s, A: %s", gc.mem_free(), gc.mem_alloc())
+        gc.collect()
         gc.threshold(gc.mem_free() // 4 + gc.mem_alloc())
-        gc.collect()
 
+        mods = utils.unimport_begin()
         result_msg, accept_msgs = await sign_tx_dispatch(state, received_msg)
-        gc.collect()
+        utils.unimport_end(mods)
 
         if accept_msgs is None:
             break
+        received_msg = await ctx.call(result_msg, *accept_msgs)
 
-        await ctx.write(result_msg)
-        del (result_msg, received_msg)
-        utils.unimport_end(mods)
-
-        received_msg = await ctx.read(accept_msgs)
-        gc.collect()
-
-    del state
-    utils.unimport_end(mods)
-    gc.collect()
     return result_msg
 
 
