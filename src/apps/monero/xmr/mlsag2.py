@@ -177,7 +177,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
 
 def prove_rct_mg(
-    message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn_fee_key
+    message, pubs, in_sk, out_sk_mask, out_pk, kLRki, mscout, index, txn_fee_key
 ):
     """
     c.f. http://eprint.iacr.org/2015/1098 section 4. definition 10.
@@ -197,7 +197,7 @@ def prove_rct_mg(
 
     if len(in_sk) != rows:
         raise ValueError("Bad inSk size")
-    if len(out_sk) != len(out_pk):
+    if len(out_sk_mask) != len(out_pk):
         raise ValueError("Bad outsk/putpk size")
     if (not kLRki or not mscout) and (kLRki and mscout):
         raise ValueError("Only one of kLRki/mscout is present")
@@ -231,7 +231,7 @@ def prove_rct_mg(
 
     for j in range(len(out_pk)):
         sk[rows] = crypto.sc_sub(
-            sk[rows], out_sk[j].mask
+            sk[rows], out_sk_mask[j]
         )  # subtract output masks in last row
 
     return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)

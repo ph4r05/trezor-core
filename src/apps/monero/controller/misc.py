@@ -17,12 +17,6 @@ class TrezorChangeAddressError(TrezorError):
     pass
 
 
-class StdObj:
-    def __init__(self, **kwargs):
-        for kw in kwargs:
-            setattr(self, kw, kwargs[kw])
-
-
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
     from apps.monero.xmr import crypto
 
@@ -138,14 +132,3 @@ def dump_rsig_bp(rsig):
     offset += 32
     memcpy(buff, offset, rsig.t, 0, 32)
     return buff
-
-
-def dst_entry_to_stdobj(dst):
-    if dst is None:
-        return None
-
-    addr = StdObj(
-        spend_public_key=dst.addr.spend_public_key,
-        view_public_key=dst.addr.view_public_key,
-    )
-    return StdObj(amount=dst.amount, addr=addr, is_subaddress=dst.is_subaddress)

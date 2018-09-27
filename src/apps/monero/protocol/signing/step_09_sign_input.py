@@ -7,8 +7,8 @@ import gc
 from .state import State
 
 from apps.monero.controller import misc
-from apps.monero.xmr import common, crypto
 from apps.monero.layout import confirms
+from apps.monero.xmr import common, crypto
 
 
 async def sign_input(
@@ -94,6 +94,7 @@ async def sign_input(
 
     # Spending secret
     from apps.monero.xmr.enc import chacha_poly
+    from apps.monero.xmr.serialize_messages.ct_keys import CtKey
 
     input_secret = crypto.decodeint(
         chacha_poly.decrypt_pack(
@@ -106,7 +107,7 @@ async def sign_input(
 
     # Basic setup, sanity check
     index = src_entr.real_output
-    in_sk = misc.StdObj(dest=input_secret, mask=crypto.decodeint(src_entr.mask))
+    in_sk = CtKey(dest=input_secret, mask=crypto.decodeint(src_entr.mask))
     kLRki = src_entr.multisig_kLRki if state.multi_sig else None
 
     # Private key correctness test
@@ -155,7 +156,7 @@ async def sign_input(
             state.full_message,
             mix_ring,
             [in_sk],
-            state.output_sk,
+            state.output_sk_masks,
             state.output_pk,
             kLRki,
             None,

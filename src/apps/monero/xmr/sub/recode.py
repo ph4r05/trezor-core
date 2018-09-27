@@ -1,9 +1,4 @@
 from apps.monero.xmr import crypto
-from apps.monero.xmr.serialize_messages.tx_ecdh import EcdhTuple
-
-
-def copy_ecdh(ecdh):
-    return EcdhTuple(mask=ecdh.mask, amount=ecdh.amount)
 
 
 def recode_ecdh(ecdh, encode=True):
