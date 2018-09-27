@@ -16,15 +16,17 @@ async def init_transaction(state: State, address_n, network_type, tsx_data):
 
     state.creds = await misc.monero_get_creds(state.ctx, address_n, network_type)
 
+    state.fee = state.fee if state.fee > 0 else 0
+
     state.tx_priv = crypto.random_scalar()
     state.tx_pub = crypto.scalarmult_base(state.tx_priv)
 
-    state._mem_trace(1)
+    state.mem_trace(1)
 
     # Ask for confirmation
     await confirms.confirm_transaction(state.ctx, tsx_data, state.creds)
     gc.collect()
-    state._mem_trace(3)
+    state.mem_trace(3)
 
     # Basic transaction parameters
     state.input_count = tsx_data.num_inputs
@@ -68,7 +70,7 @@ async def init_transaction(state: State, address_n, network_type, tsx_data):
     state.need_additional_txkeys = num_subaddresses > 0 and (
         num_stdaddresses > 0 or num_subaddresses > 1
     )
-    state._mem_trace(4, True)
+    state.mem_trace(4, True)
 
     # Extra processing, payment id
     state.tx.version = 2
@@ -83,27 +85,27 @@ async def init_transaction(state: State, address_n, network_type, tsx_data):
     state.tx_prefix_hasher.uvarint(state.tx.unlock_time)
     state.tx_prefix_hasher.container_size(state.input_count)  # ContainerType
     state.tx_prefix_hasher.release()
-    state._mem_trace(10, True)
+    state.mem_trace(10, True)
 
     # Final message hasher
     state.full_message_hasher.init(state.use_simple_rct)
-    state.full_message_hasher.set_type_fee(state.get_rct_type(), state.get_fee())
+    state.full_message_hasher.set_type_fee(state.get_rct_type(), state.fee)
 
     # Sub address precomputation
     if tsx_data.account is not None and tsx_data.minor_indices:
         precompute_subaddr(state, tsx_data.account, tsx_data.minor_indices)
-    state._mem_trace(5, True)
+    state.mem_trace(5, True)
 
     # HMAC outputs - pinning
     hmacs = []
-    for idx in range(state.num_dests()):
+    for idx in range(state.output_count):
         c_hmac = await hmac_encryption_keys.gen_hmac_tsxdest(
             state.key_hmac, tsx_data.outputs[idx], idx
         )
         hmacs.append(c_hmac)
         gc.collect()
 
-    state._mem_trace(6)
+    state.mem_trace(6)
 
     from trezor.messages.MoneroTransactionInitAck import MoneroTransactionInitAck
     from trezor.messages.MoneroTransactionRsigData import MoneroTransactionRsigData
@@ -141,11 +143,11 @@ def check_change(state: State, outputs):
 
     change_addr = state.change_address()
     if change_addr is None:
-        state._mem_trace("No change" if __debug__ else None)
+        state.mem_trace("No change" if __debug__ else None)
         return
 
     if change_idx is None and state.output_change.amount == 0 and len(outputs) == 2:
-        state._mem_trace("Sweep tsx" if __debug__ else None)
+        state.mem_trace("Sweep tsx" if __debug__ else None)
         return  # sweep dummy tsx
 
     found = False

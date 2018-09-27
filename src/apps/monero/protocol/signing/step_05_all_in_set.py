@@ -14,7 +14,7 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
     """
     If in the applicable offloading mode, generate commitment masks.
     """
-    state._mem_trace(0)
+    state.mem_trace(0)
     # state.state.input_all_done() todo check if needed?
     await confirms.transaction_step(state.ctx, state.STEP_ALL_IN)
 
@@ -31,11 +31,11 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
 
     # Simple offloading - generate random masks that sum to the input mask sum.
     tmp_buff = bytearray(32)
-    rsig_data.mask = bytearray(32 * state.num_dests())
+    rsig_data.mask = bytearray(32 * state.output_count)
     state.sumout = crypto.sc_init(0)
-    for i in range(state.num_dests()):
+    for i in range(state.output_count):
         cur_mask = crypto.new_scalar()
-        is_last = i + 1 == state.num_dests()
+        is_last = i + 1 == state.output_count
         if is_last and state.use_simple_rct:
             crypto.sc_sub_into(cur_mask, state.sumpouts_alphas, state.sumout)
         else:

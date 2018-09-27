@@ -33,9 +33,9 @@ async def set_input(state: State, src_entr):
 
     state.inp_idx += 1
 
-    await transaction_step(state.STEP_INP, state.inp_idx, state.num_inputs())
+    await transaction_step(state.STEP_INP, state.inp_idx, state.input_count)
 
-    if state.inp_idx >= state.num_inputs():
+    if state.inp_idx >= state.input_count:
         raise ValueError("Too many inputs")
     if src_entr.real_output >= len(src_entr.outputs):
         raise ValueError(
@@ -60,7 +60,7 @@ async def set_input(state: State, src_entr):
         src_entr.real_output_in_tx_index,
     )
     xi, ki, di = secs
-    state._mem_trace(1, True)
+    state.mem_trace(1, True)
 
     # Construct tx.vin
     ki_real = src_entr.multisig_kLRki.ki if state.multi_sig else ki
@@ -74,13 +74,13 @@ async def set_input(state: State, src_entr):
 
     # Serialize with variant code for TxinToKey
     vini_bin = misc.dump_msg(vini, preallocate=64, prefix=b"\x02")
-    state._mem_trace(2, True)
+    state.mem_trace(2, True)
 
     # HMAC(T_in,i || vin_i)
     hmac_vini = await hmac_encryption_keys.gen_hmac_vini(
         state.key_hmac, src_entr, vini_bin, state.inp_idx
     )
-    state._mem_trace(3, True)
+    state.mem_trace(3, True)
 
     # PseudoOuts commitment, alphas stored to state
     pseudo_out = None
@@ -107,7 +107,7 @@ async def set_input(state: State, src_entr):
     )
 
     # All inputs done?
-    if state.inp_idx + 1 == state.num_inputs():
+    if state.inp_idx + 1 == state.input_count:
         tsx_inputs_done(state)
 
     return MoneroTransactionSetInputAck(
@@ -127,7 +127,7 @@ def tsx_inputs_done(state: State):
     # self.state.input_done()
     state.subaddresses = None  # TODO why? remove this?
 
-    if state.inp_idx + 1 != state.num_inputs():
+    if state.inp_idx + 1 != state.input_count:
         raise ValueError("Input count mismatch")
 
 

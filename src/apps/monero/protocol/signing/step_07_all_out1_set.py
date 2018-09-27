@@ -16,13 +16,13 @@ from apps.monero.xmr import common, crypto
 async def all_out1_set(state: State):
     print("07")
 
-    state._mem_trace(0)
+    state.mem_trace(0)
     # state.state.set_output_done() todo needed?
 
     await confirms.transaction_step(state.ctx, state.STEP_ALL_OUT)
-    state._mem_trace(1)
+    state.mem_trace(1)
 
-    if state.out_idx + 1 != state.num_dests():
+    if state.out_idx + 1 != state.output_count:
         raise ValueError("Invalid out num")
 
     # Test if \sum Alpha == \sum A
@@ -39,7 +39,7 @@ async def all_out1_set(state: State):
                 state.summary_outs_money,
             )
         )
-    state._mem_trace(2)
+    state.mem_trace(2)
 
     # Set public key to the extra
     # Not needed to remove - extra is clean
@@ -47,7 +47,7 @@ async def all_out1_set(state: State):
     state.additional_tx_public_keys = None
 
     gc.collect()
-    state._mem_trace(3)
+    state.mem_trace(3)
 
     if state.summary_outs_money > state.summary_inputs_money:
         raise ValueError(
@@ -60,7 +60,7 @@ async def all_out1_set(state: State):
     extra_b = state.tx.extra
     state.tx = None
     gc.collect()
-    state._mem_trace(4)
+    state.mem_trace(4)
 
     # Txprefix match check for multisig
     if not common.is_empty(state.exp_tx_prefix_hash) and not common.ct_equal(
@@ -71,7 +71,7 @@ async def all_out1_set(state: State):
         raise misc.TrezorTxPrefixHashNotMatchingError("Tx prefix invalid")
 
     gc.collect()
-    state._mem_trace(5)
+    state.mem_trace(5)
 
     from trezor.messages.MoneroRingCtSig import MoneroRingCtSig
     from trezor.messages.MoneroTransactionAllOutSetAck import (
@@ -80,7 +80,7 @@ async def all_out1_set(state: State):
 
     # Initializes RCTsig structure (fee, tx prefix hash, type)
     rv_pb = MoneroRingCtSig(
-        txn_fee=state.get_fee(),
+        txn_fee=state.fee,
         message=state.tx_prefix_hash,
         rv_type=state.get_rct_type(),
     )
