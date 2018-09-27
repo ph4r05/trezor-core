@@ -38,7 +38,7 @@ def _out_pk(state: State):
     """
     Sets out_pk for the incremental hashing mlsag.
     """
-    if state.num_dests() != len(state.output_pk):
+    if state.output_count != len(state.output_pk):
         raise ValueError("Invalid number of ecdh")
 
     for out in state.output_pk:

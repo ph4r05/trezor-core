@@ -19,10 +19,10 @@ async def input_vini(
     )
 
     await confirms.transaction_step(
-        state.ctx, state.STEP_VINI, state.inp_idx + 1, state.num_inputs()
+        state.ctx, state.STEP_VINI, state.inp_idx + 1, state.input_count
     )
 
-    if state.inp_idx >= state.num_inputs():
+    if state.inp_idx >= state.input_count:
         raise ValueError("Too many inputs")
 
     state.inp_idx += 1

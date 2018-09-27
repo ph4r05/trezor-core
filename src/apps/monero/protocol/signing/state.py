@@ -83,7 +83,7 @@ class State:
         self.tx_prefix_hasher = KeccakXmrArchive()
         self.full_message_hasher = PreMlsagHasher()
 
-    def _mem_trace(self, x=None, collect=False):
+    def mem_trace(self, x=None, collect=False):
         if __debug__:
             log.debug(
                 __name__,
@@ -99,15 +99,6 @@ class State:
         if condition:
             return
         raise ValueError("Assertion error%s" % (" : %s" % msg if msg else ""))
-
-    def num_inputs(self):
-        return self.input_count
-
-    def num_dests(self):
-        return self.output_count
-
-    def get_fee(self):
-        return self.fee if self.fee > 0 else 0
 
     def change_address(self):
         return self.output_change.addr if self.output_change else None

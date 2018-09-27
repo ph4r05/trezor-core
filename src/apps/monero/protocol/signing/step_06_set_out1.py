@@ -15,21 +15,21 @@ from apps.monero.xmr import common, crypto
 
 
 async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
-    state._mem_trace(0, True)
+    state.mem_trace(0, True)
     mods = utils.unimport_begin()
 
     await confirms.transaction_step(
-        state.ctx, state.STEP_OUT, state.out_idx + 1, state.num_dests()
+        state.ctx, state.STEP_OUT, state.out_idx + 1, state.output_count
     )
-    state._mem_trace(1)
+    state.mem_trace(1)
 
     if (
-        state.inp_idx + 1 != state.num_inputs()
+        state.inp_idx + 1 != state.input_count
     ):  # todo check state.state.is_input_vins() - needed?
         raise ValueError("Invalid number of inputs")
 
     state.out_idx += 1
-    state._mem_trace(2, True)
+    state.mem_trace(2, True)
 
     if dst_entr.amount <= 0 and state.tx.version <= 1:
         raise ValueError("Destination with wrong amount: %s" % dst_entr.amount)
@@ -41,21 +41,21 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
         raise ValueError("HMAC invalid")
     del (dst_entr_hmac, dst_entr_hmac_computed)
-    state._mem_trace(3, True)
+    state.mem_trace(3, True)
 
     # First output - tx prefix hasher - size of the container
     if state.out_idx == 0:
-        state.tx_prefix_hasher.container_size(state.num_dests())
-    state._mem_trace(4, True)
+        state.tx_prefix_hasher.container_size(state.output_count)
+    state.mem_trace(4, True)
 
     state.summary_outs_money += dst_entr.amount
     utils.unimport_end(mods)
-    state._mem_trace(5, True)
+    state.mem_trace(5, True)
 
     # Range proof first, memory intensive
     rsig, mask = _range_proof(state, state.out_idx, dst_entr.amount, rsig_data)
     utils.unimport_end(mods)
-    state._mem_trace(6, True)
+    state.mem_trace(6, True)
 
     # Amount key, tx out key
     additional_txkey_priv = _set_out1_additional_keys(state, dst_entr)
@@ -65,11 +65,11 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
         derivation, state.out_idx, crypto.decodepoint(dst_entr.addr.spend_public_key)
     )
     del (derivation, additional_txkey_priv)
-    state._mem_trace(7, True)
+    state.mem_trace(7, True)
 
     # Tx header prefix hashing, hmac dst_entr
     tx_out_bin, hmac_vouti = await _set_out1_tx_out(state, dst_entr, tx_out_key)
-    state._mem_trace(11, True)
+    state.mem_trace(11, True)
 
     # Out_pk, ecdh_info
     out_pk, ecdh_info_bin = _set_out1_ecdh(
@@ -80,18 +80,18 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
         amount_key=amount_key,
     )
     del (dst_entr, mask, amount_key, tx_out_key)
-    state._mem_trace(12, True)
+    state.mem_trace(12, True)
 
     # Incremental hashing of the ECDH info.
     # RctSigBase allows to hash only one of the (ecdh, out_pk) as they are serialized
     # as whole vectors. Hashing ECDH info saves state space.
     state.full_message_hasher.set_ecdh(ecdh_info_bin)
-    state._mem_trace(13, True)
+    state.mem_trace(13, True)
 
     # Output_pk is stored to the state as it is used during the signature and hashed to the
     # RctSigBase later.
     state.output_pk.append(out_pk)
-    state._mem_trace(14, True)
+    state.mem_trace(14, True)
 
     from trezor.messages.MoneroTransactionSetOutputAck import (
         MoneroTransactionSetOutputAck
@@ -116,17 +116,17 @@ async def _set_out1_tx_out(state: State, dst_entr, tx_out_key):
     tx_out_bin[0] = 0  # amount varint
     tx_out_bin[1] = 2  # variant code TxoutToKey
     crypto.encodepoint_into(tx_out_bin, tx_out_key, 2)
-    state._mem_trace(8)
+    state.mem_trace(8)
 
     # Tx header prefix hashing
     state.tx_prefix_hasher.buffer(tx_out_bin)
-    state._mem_trace(9, True)
+    state.mem_trace(9, True)
 
     # Hmac dest_entr.
     hmac_vouti = await hmac_encryption_keys.gen_hmac_vouti(
         state.key_hmac, dst_entr, tx_out_bin, state.out_idx
     )
-    state._mem_trace(10, True)
+    state.mem_trace(10, True)
     return tx_out_bin, hmac_vouti
 
 
@@ -173,17 +173,17 @@ def _range_proof(state, idx, amount, rsig_data=None):
     # Pedersen commitment on the value, mask from the commitment, range signature.
     C, rsig = None, None
 
-    state._mem_trace("pre-rproof" if __debug__ else None, collect=True)
+    state.mem_trace("pre-rproof" if __debug__ else None, collect=True)
     if not state.rsig_offload and state.use_bulletproof:
         rsig = ring_ct.prove_range_bp_batch(state.output_amounts, state.output_masks)
-        state._mem_trace("post-bp" if __debug__ else None, collect=True)
+        state.mem_trace("post-bp" if __debug__ else None, collect=True)
 
         # Incremental hashing
         state.full_message_hasher.rsig_val(rsig, True, raw=False)
-        state._mem_trace("post-bp-hash" if __debug__ else None, collect=True)
+        state.mem_trace("post-bp-hash" if __debug__ else None, collect=True)
 
         rsig = misc.dump_rsig_bp(rsig)
-        state._mem_trace(
+        state.mem_trace(
             "post-bp-ser, size: %s" % len(rsig) if __debug__ else None, collect=True
         )
 
@@ -208,7 +208,7 @@ def _range_proof(state, idx, amount, rsig_data=None):
         state.full_message_hasher.rsig_val(bp_obj, True, raw=False)
         res = ring_ct.verify_bp(bp_obj, state.output_amounts, masks)
         state.assrt(res, "BP verification fail")
-        state._mem_trace("BP verified" if __debug__ else None, collect=True)
+        state.mem_trace("BP verified" if __debug__ else None, collect=True)
         del (bp_obj, ring_ct)
 
     elif state.rsig_offload and not state.use_bulletproof:
@@ -218,7 +218,7 @@ def _range_proof(state, idx, amount, rsig_data=None):
     else:
         raise misc.TrezorError("Unexpected rsig state")
 
-    state._mem_trace("rproof" if __debug__ else None, collect=True)
+    state.mem_trace("rproof" if __debug__ else None, collect=True)
     state.output_amounts = []
     if not state.rsig_offload:
         state.output_masks = []
@@ -268,7 +268,7 @@ def _set_out1_additional_keys(state: State, dst_entr):
     additional_txkey = None
     additional_txkey_priv = None
     if state.need_additional_txkeys:
-        use_provided = state.num_dests() == len(state.additional_tx_private_keys)
+        use_provided = state.output_count == len(state.additional_tx_private_keys)
         additional_txkey_priv = (
             state.additional_tx_private_keys[state.out_idx]
             if use_provided
@@ -347,7 +347,7 @@ def _get_out_mask(state: State, idx):
     if state.rsig_offload:
         return state.output_masks[idx]
     else:
-        is_last = idx + 1 == state.num_dests()
+        is_last = idx + 1 == state.output_count
         if is_last:
             return crypto.sc_sub(state.sumpouts_alphas, state.sumout)
         else:
