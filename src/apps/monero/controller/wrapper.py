@@ -19,9 +19,3 @@ async def monero_get_creds(ctx, address_n=None, network_type=None):
 
     creds = AccountCreds.new_wallet(keys[2], keys[0], network_type)
     return creds
-
-
-def get_interface(ctx):
-    from apps.monero.controller import iface
-
-    return iface.get_iface(ctx)
