@@ -31,7 +31,7 @@ async def init_transaction(state: State, address_n, network_type, tsx_data):
     # Basic transaction parameters
     state.input_count = tsx_data.num_inputs
     state.output_count = len(tsx_data.outputs)
-    state.output_change = misc.dst_entry_to_stdobj(tsx_data.change_dts)
+    state.output_change = tsx_data.change_dts
     state.mixin = tsx_data.mixin
     state.fee = tsx_data.fee
     state.account_idx = tsx_data.account
@@ -125,10 +125,12 @@ def get_primary_change_address(state: State):
     """
     Computes primary change address for the current account index
     """
+    from trezor.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
+
     D, C = monero.generate_sub_address_keys(
         state.creds.view_key_private, state.creds.spend_key_public, state.account_idx, 0
     )
-    return misc.StdObj(
+    return MoneroAccountPublicAddress(
         view_public_key=crypto.encodepoint(C), spend_public_key=crypto.encodepoint(D)
     )
 

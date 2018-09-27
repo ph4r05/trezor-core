@@ -56,7 +56,7 @@ class State:
         self.input_secrets = []
         self.input_alphas = []
         self.input_pseudo_outs = []
-        self.output_sk = []
+        self.output_sk_masks = []
         self.output_pk = []
         self.output_amounts = []
         self.output_masks = []

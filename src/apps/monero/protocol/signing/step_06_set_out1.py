@@ -238,19 +238,21 @@ def _return_rsig_data(state, rsig):
 
 def _set_out1_ecdh(state: State, dest_pub_key, amount, mask, amount_key):
     from apps.monero.xmr import ring_ct
+    from apps.monero.xmr.serialize_messages.ct_keys import CtKey
 
     # Mask sum
-    out_pk = misc.StdObj(
+    out_pk = CtKey(
         dest=crypto.encodepoint(dest_pub_key),
         mask=crypto.encodepoint(crypto.gen_commitment(mask, amount)),
     )
     state.sumout = crypto.sc_add(state.sumout, mask)
-    state.output_sk.append(misc.StdObj(mask=mask))
+    state.output_sk_masks.append(mask)
 
     # ECDH masking
+    from apps.monero.xmr.serialize_messages.tx_ecdh import EcdhTuple
     from apps.monero.xmr.sub.recode import recode_ecdh
 
-    ecdh_info = misc.StdObj(mask=mask, amount=crypto.sc_init(amount))
+    ecdh_info = EcdhTuple(mask=mask, amount=crypto.sc_init(amount))
     ring_ct.ecdh_encode_into(
         ecdh_info, ecdh_info, derivation=crypto.encodeint(amount_key)
     )
