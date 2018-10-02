@@ -74,24 +74,6 @@ def dump_uvarint_b_into(n, buffer, offset=0):
     return buffer
 
 
-def load_uint_b(buffer, width):
-    """
-    Loads fixed size integer from the buffer
-    """
-    result = 0
-    for idx in range(width):
-        result += buffer[idx] << (8 * idx)
-    return result
-
-
-def dump_uint_b(n, width):
-    """
-    Serializes fixed size integer to the buffer
-    """
-    buffer = bytearray(width)
-    return dump_uvarint_b_into(n, buffer, 0)
-
-
 def dump_uint_b_into(n, width, buffer, offset=0):
     """
     Serializes fixed size integer to the buffer

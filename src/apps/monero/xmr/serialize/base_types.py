@@ -1,5 +1,5 @@
 class XmrType:
-    VERSION = 0
+    pass
 
 
 class UVarintType(XmrType):
@@ -12,21 +12,5 @@ class IntType(XmrType):
     VARIABLE = 0
 
 
-class BoolType(IntType):
-    WIDTH = 1
-
-
 class UInt8(IntType):
     WIDTH = 1
-
-
-class UInt32(IntType):
-    WIDTH = 4
-
-
-class UInt64(IntType):
-    WIDTH = 8
-
-
-class SizeT(UInt64):
-    WIDTH = 8
