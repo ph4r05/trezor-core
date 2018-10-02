@@ -123,12 +123,6 @@ class Archive:
         Loads/dumps blob
         """
         elem_type = elem_type if elem_type else elem.__class__
-        if hasattr(elem_type, "serialize_archive"):
-            elem = elem_type() if elem is None else elem
-            return elem.serialize_archive(
-                self, elem=elem, elem_type=elem_type, params=params
-            )
-
         if self.writing:
             return dump_blob(self.iobj, elem=elem, elem_type=elem_type, params=params)
         else:
@@ -138,12 +132,6 @@ class Archive:
         """
         Loads/dumps container
         """
-        if hasattr(container_type, "serialize_archive"):
-            container = container_type() if container is None else container
-            return container.serialize_archive(
-                self, elem=container, elem_type=container_type, params=params
-            )
-
         if self.writing:
             return self._dump_container(self.iobj, container, container_type, params)
         else:
@@ -155,9 +143,6 @@ class Archive:
         """
         Container size
         """
-        if hasattr(container_type, "serialize_archive"):
-            raise ValueError("not supported")
-
         if self.writing:
             return self._dump_container_size(
                 self.iobj, container_len, container_type, params
@@ -169,8 +154,6 @@ class Archive:
         """
         Single cont value
         """
-        if hasattr(container_type, "serialize_archive"):
-            raise ValueError("not supported")
         if self.writing:
             return self._dump_container_val(self.iobj, elem, container_type, params)
         else:
@@ -181,12 +164,6 @@ class Archive:
         Loads/dumps variant type
         """
         elem_type = elem_type if elem_type else elem.__class__
-        if hasattr(elem_type, "serialize_archive"):
-            elem = elem_type() if elem is None else elem
-            return elem.serialize_archive(
-                self, elem=elem, elem_type=elem_type, params=params
-            )
-
         if self.writing:
             return self._dump_variant(
                 self.iobj,
@@ -208,10 +185,6 @@ class Archive:
         Loads/dumps message
         """
         elem_type = msg_type if msg_type is not None else msg.__class__
-        if hasattr(elem_type, "serialize_archive"):
-            msg = elem_type() if msg is None else msg
-            return msg.serialize_archive(self)
-
         if self.writing:
             return self._dump_message(self.iobj, msg, msg_type=msg_type)
         else:
@@ -238,22 +211,6 @@ class Archive:
         # If part of our hierarchy - return the object
         if issubclass(elem_type, XmrType):
             return elem_type
-
-        # Basic message types determined by the name.
-        # Due to unimport workflow the hierarchy linking may got lost.
-        etypes = (
-            UVarintType,
-            IntType,
-            BlobType,
-            UnicodeType,
-            VariantType,
-            ContainerType,
-            MessageType,
-        )
-        cname = elem_type.__name__
-        for e in etypes:
-            if cname == e.__name__:
-                return e
 
     def _is_type(self, elem_type, test_type):
         return issubclass(elem_type, test_type)
@@ -382,9 +339,6 @@ class Archive:
         """
         mtype = msg.__class__ if msg_type is None else msg_type
         fields = mtype.f_specs()
-        if hasattr(mtype, "serialize_archive"):
-            raise ValueError("Cannot directly load, has to use archive with %s" % mtype)
-
         for field in fields:
             self._dump_message_field(writer, msg=msg, field=field)
 
@@ -395,11 +349,6 @@ class Archive:
         """
         msg = msg_type() if msg is None else msg
         fields = msg_type.f_specs() if msg_type else msg.__class__.f_specs()
-        if hasattr(msg_type, "serialize_archive"):
-            raise ValueError(
-                "Cannot directly load, has to use archive with %s" % msg_type
-            )
-
         for field in fields:
             self._load_message_field(reader, msg, field)
 
