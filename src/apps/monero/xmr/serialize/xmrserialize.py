@@ -31,10 +31,6 @@ required:
 >>>         """
 '''
 
-import sys
-
-from trezor import log
-
 from apps.monero.xmr.serialize.base_types import IntType, UVarintType, XmrType
 from apps.monero.xmr.serialize.erefs import eref, get_elem, set_elem
 from apps.monero.xmr.serialize.int_serialize import (
@@ -52,18 +48,6 @@ from apps.monero.xmr.serialize.message_types import (
     container_elem_type,
     gen_elem_array,
 )
-
-
-def import_def(module, name):
-    if module not in sys.modules:
-        if not module.startswith("apps.monero"):
-            raise ValueError("Module not allowed: %s" % module)
-        if __debug__:
-            log.debug(__name__, "Importing: from %s import %s", module, name)
-        __import__(module, None, None, (name,), 0)
-
-    r = getattr(sys.modules[module], name)
-    return r
 
 
 class Archive:
@@ -255,7 +239,8 @@ class Archive:
         if issubclass(elem_type, XmrType):
             return elem_type
 
-        # Basic decision types
+        # Basic message types determined by the name.
+        # Due to unimport workflow the hierarchy linking may got lost.
         etypes = (
             UVarintType,
             IntType,
@@ -269,31 +254,6 @@ class Archive:
         for e in etypes:
             if cname == e.__name__:
                 return e
-
-        # Inferred type: need to translate it to the current
-        try:
-            m = elem_type.__module__
-            r = import_def(m, cname)
-            sub_test = issubclass(r, XmrType)
-            if __debug__:
-                log.debug(
-                    __name__,
-                    "resolved %s, sub: %s, id_e: %s, id_mod: %s",
-                    r,
-                    sub_test,
-                    id(r),
-                    id(sys.modules[m]),
-                )
-            if not sub_test:
-                log.warning(__name__, "resolution hierarchy broken")
-
-            return r
-
-        except Exception as e:
-            raise ValueError(
-                "Could not translate elem type: %s %s, exc: %s %s"
-                % (type(elem_type), elem_type, type(e), e)
-            )
 
     def _is_type(self, elem_type, test_type):
         return issubclass(elem_type, test_type)
