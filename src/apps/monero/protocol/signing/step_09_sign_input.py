@@ -176,14 +176,6 @@ async def sign_input(
     gc.collect()
     state.mem_trace(6)
 
-    # Multisig values returned encrypted, keys returned after finished successfully.
-    if state.multi_sig:
-        from apps.monero.xmr.enc import chacha_poly
-
-        cout = chacha_poly.encrypt_pack(
-            hmac_encryption_keys.enc_key_cout(state.key_enc), crypto.encodeint(msc)
-        )
-
     # Final state transition
     if state.inp_idx + 1 == state.input_count:
         # state.state.set_signature_done()  todo remove?

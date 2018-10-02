@@ -20,10 +20,6 @@ async def final_msg(state: State):
     # state.state.set_final() todo needed?
     print("10")
 
-    cout_key = (
-        hmac_encryption_keys.enc_key_cout(state.key_enc) if state.multi_sig else None
-    )
-
     # Encrypted tx keys under transaction specific key, derived from txhash and spend key.
     # Deterministic transaction key, so we can recover it just from transaction and the spend key.
     tx_key, salt, rand_mult = misc.compute_tx_key(
@@ -39,5 +35,5 @@ async def final_msg(state: State):
     gc.collect()
 
     return MoneroTransactionFinalAck(
-        cout_key=cout_key, salt=salt, rand_mult=rand_mult, tx_enc_keys=tx_enc_keys
+        cout_key=None, salt=salt, rand_mult=rand_mult, tx_enc_keys=tx_enc_keys
     )
