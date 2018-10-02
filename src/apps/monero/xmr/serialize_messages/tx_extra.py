@@ -33,7 +33,3 @@ class TxExtraField(VariantType):
             ("tx_extra_nonce", TxExtraNonce),
             ("tx_extra_additional_pub_keys", TxExtraAdditionalPubKeys),
         )
-
-
-class TxExtraFields(ContainerType):
-    ELEM_TYPE = TxExtraField

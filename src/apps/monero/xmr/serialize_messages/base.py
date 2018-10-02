@@ -27,7 +27,5 @@ class ECKey(BlobType):
 
 
 ECPoint = Hash
-SecretKey = ECKey
 ECPublicKey = ECPoint
 KeyImage = ECPoint
-KeyDerivation = ECPoint

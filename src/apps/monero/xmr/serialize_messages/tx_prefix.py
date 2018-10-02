@@ -2,7 +2,6 @@ from micropython import const
 
 from apps.monero.xmr.serialize.base_types import UInt8, UVarintType
 from apps.monero.xmr.serialize.message_types import (
-    BlobType,
     ContainerType,
     MessageType,
     VariantType,
@@ -101,22 +100,3 @@ class TxOut(MessageType):
     @classmethod
     def f_specs(cls):
         return (("amount", UVarintType), ("target", TxoutTargetV))
-
-
-class TransactionPrefix(MessageType):
-    @classmethod
-    def f_specs(cls):
-        return (
-            ("version", UVarintType),
-            ("unlock_time", UVarintType),
-            ("vin", ContainerType, TxInV),
-            ("vout", ContainerType, TxOut),
-            ("extra", ContainerType, UInt8),
-        )
-
-
-class TransactionPrefixExtraBlob(TransactionPrefix):
-    # noinspection PyTypeChecker
-    @classmethod
-    def f_specs(cls):
-        return TransactionPrefix.f_specs()[:-1] + (("extra", BlobType),)
