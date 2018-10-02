@@ -5,17 +5,13 @@ from trezor import log, loop, utils
 from apps.monero.xmr.serialize import xmrserialize as xms
 from apps.monero.xmr.serialize.readwriter import MemoryReaderWriter
 from apps.monero.xmr.serialize_messages.base import ECPoint
-from apps.monero.xmr.serialize_messages.ct_keys import CtKey
 from apps.monero.xmr.serialize_messages.tx_prefix import (
     TxinToKey,
     TxinGen,
     TxInV,
     TxOut,
     TxoutToKey,
-    TransactionPrefix,
 )
-from apps.monero.xmr.serialize_messages.tx_rsig_boro import BoroSig
-from apps.monero.xmr.serialize_messages.tx_src_entry import OutputEntry
 
 
 class XmrTstData(object):
@@ -64,17 +60,6 @@ class XmrTstData(object):
         msg = TransactionPrefix(
             version=2, unlock_time=10, vin=vin, vout=vout, extra=list(range(31))
         )
-        return msg
-
-    def gen_borosig(self):
-        """
-        Returns a BoroSig message
-        :return:
-        """
-        ee = self.generate_ec_key()
-        s0 = [self.generate_ec_key() for _ in range(64)]
-        s1 = [self.generate_ec_key() for _ in range(64)]
-        msg = BoroSig(s0=s0, s1=s1, ee=ee)
         return msg
 
 
@@ -174,24 +159,6 @@ class TestMoneroSerializer(unittest.TestCase):
         self.assertEqual(msg.height, msg2.height)
         self.assertEqual(msg2, test_deser)
 
-    def test_tuple(self):
-        """
-        Simple tuple type
-        :return:
-        """
-        out_entry = [
-            123,
-            CtKey(dest=self.tdata.generate_ec_key(), mask=self.tdata.generate_ec_key()),
-        ]
-        writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-
-        ar1.tuple(out_entry, OutputEntry)
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.tuple(None, OutputEntry)
-
-        self.assertEqual(out_entry, test_deser)
-
     def test_txin_to_key(self):
         """
         TxinToKey
@@ -231,74 +198,6 @@ class TestMoneroSerializer(unittest.TestCase):
         self.assertEqual(msg, test_deser)
         self.assertEqual(msg.variant_elem, test_deser.variant_elem)
         self.assertEqual(msg.variant_elem_type, test_deser.variant_elem_type)
-
-    def test_tx_prefix(self):
-        """
-        TransactionPrefix
-        :return:
-        """
-        msg = self.tdata.gen_transaction_prefix()
-
-        writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.message(msg)
-
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.message(None, TransactionPrefix)
-        self.assertEqual(test_deser.__class__, TransactionPrefix)
-        self.assertEqual(test_deser.version, msg.version)
-        self.assertEqual(test_deser.unlock_time, msg.unlock_time)
-        self.assertEqual(len(test_deser.vin), len(msg.vin))
-        self.assertEqual(len(test_deser.vout), len(msg.vout))
-        self.assertEqual(len(test_deser.extra), len(msg.extra))
-        self.assertEqual(test_deser.extra, msg.extra)
-        self.assertListEqual(test_deser.vin, msg.vin)
-        self.assertListEqual(test_deser.vout, msg.vout)
-        self.assertEqual(test_deser, msg)
-
-    def test_boro_sig(self):
-        """
-        BoroSig
-        :return:
-        """
-        msg = self.tdata.gen_borosig()
-
-        writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.message(msg)
-
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.message(None, BoroSig)
-        self.assertEqual(msg, test_deser)
-
-    def test_transaction_prefix(self):
-        """
-
-        :return:
-        """
-        tsx_hex = b"013D01FF010680A0DB5002A9243CF5459DE5114E6A1AC08F9180C9F40A3CF9880778878104E9FEA578B6A780A8D6B90702AFEBACD6A4456AF979CCBE08D37A9A670BA421B5E39AB2968DF4219DD086018B8088ACA3CF020251748BADE758D1DD65A867FA3CEDD4878485BBC8307F905E3090A030290672798090CAD2C60E020C823CCBD4AB1A1F9240844400D72CDC8B498B3181B182B0B54A405B695406A680E08D84DDCB01022A9A926097548A723863923FBFEA4913B1134B2E4AE54946268DDA99564B5D8280C0CAF384A30202A868709A8BB91734AD3EBAC127638E018139E375C1987E01CCC2A8B04427727E2101F74BF5FB3DA064F48090D9B6705E598925313875B2B4F2A50EB0517264B0721C"
-        tsx_bin = unhexlify(tsx_hex)
-
-        reader = MemoryReaderWriter(bytearray(tsx_bin))
-        ar1 = xms.Archive(reader, False)
-
-        test_deser = ar1.message(None, TransactionPrefix)
-        self.assertIsNotNone(test_deser)
-        self.assertEqual(len(reader.get_buffer()), 0)  # no data left to read
-        self.assertEqual(len(test_deser.extra), 33)
-        self.assertEqual(test_deser.extra[0], 1)
-        self.assertEqual(test_deser.extra[32], 28)
-        self.assertEqual(test_deser.unlock_time, 61)
-        self.assertEqual(test_deser.version, 1)
-        self.assertEqual(len(test_deser.vin), 1)
-        self.assertEqual(len(test_deser.vout), 6)
-        self.assertEqual(test_deser.vin[0].height, 1)
-        self.assertEqual(test_deser.vout[0].amount, 169267200)
-        self.assertEqual(len(test_deser.vout[0].target.key), 32)
-        self.assertEqual(test_deser.vout[1].amount, 2000000000)
-        self.assertEqual(len(test_deser.vout[1].target.key), 32)
-        self.assertEqual(test_deser.vout[5].amount, 10000000000000)
-        self.assertEqual(len(test_deser.vout[5].target.key), 32)
 
 
 if __name__ == "__main__":
