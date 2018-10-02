@@ -104,7 +104,12 @@ def _set_tx_extra(state: State):
 def _set_tx_prefix(state: State):
     from apps.monero.xmr.serialize.message_types import BlobType
 
-    state.tx_prefix_hasher.message_field(state.tx, ("extra", BlobType))  # extra
+    # Serializing "extra" type as BlobType.
+    # uvarint(len(extra)) || extra
+    state.tx_prefix_hasher.keep()
+    state.tx_prefix_hasher.uvarint(len(state.tx.extra))
+    state.tx_prefix_hasher.buffer(state.tx.extra)
+    state.tx_prefix_hasher.release()
 
     state.tx_prefix_hash = state.tx_prefix_hasher.get_digest()
     state.tx_prefix_hasher = None
