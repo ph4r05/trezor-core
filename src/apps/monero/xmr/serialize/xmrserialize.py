@@ -46,7 +46,6 @@ from apps.monero.xmr.serialize.message_types import (
     UnicodeType,
     VariantType,
     container_elem_type,
-    gen_elem_array,
 )
 
 
@@ -67,29 +66,6 @@ class Archive:
     def __init__(self, iobj, writing=True, **kwargs):
         self.writing = writing
         self.iobj = iobj
-
-    def prepare_container(self, size, container, elem_type=None):
-        """
-        Prepares container for serialization
-        """
-        if not self.writing:
-            if container is None:
-                return gen_elem_array(size, elem_type)
-
-            fvalue = get_elem(container)
-            if fvalue is None:
-                fvalue = []
-            fvalue += gen_elem_array(max(0, size - len(fvalue)), elem_type)
-            set_elem(container, fvalue)
-            return fvalue
-
-    def prepare_message(self, msg, msg_type):
-        """
-        Prepares message for serialization
-        """
-        if self.writing:
-            return
-        return set_elem(msg, msg_type())
 
     def uvarint(self, elem):
         """
@@ -133,10 +109,10 @@ class Archive:
         Loads/dumps container
         """
         if self.writing:
-            return self._dump_container(self.iobj, container, container_type, params)
+            return self._dump_container(container, container_type, params)
         else:
             return self._load_container(
-                self.iobj, container_type, params=params, container=container
+                container_type, params=params, container=container
             )
 
     def container_size(self, container_len=None, container_type=None, params=None):
@@ -144,18 +120,7 @@ class Archive:
         Container size
         """
         if self.writing:
-            return self._dump_container_size(
-                self.iobj, container_len, container_type, params
-            )
-        else:
-            raise ValueError("Not supported")
-
-    def container_val(self, elem, container_type, params=None):
-        """
-        Single cont value
-        """
-        if self.writing:
-            return self._dump_container_val(self.iobj, elem, container_type, params)
+            return self._dump_container_size(container_len, container_type, params)
         else:
             raise ValueError("Not supported")
 
@@ -166,14 +131,12 @@ class Archive:
         elem_type = elem_type if elem_type else elem.__class__
         if self.writing:
             return self._dump_variant(
-                self.iobj,
                 elem=elem,
                 elem_type=elem_type if elem_type else elem.__class__,
                 params=params,
             )
         else:
             return self._load_variant(
-                self.iobj,
                 elem_type=elem_type if elem_type else elem.__class__,
                 params=params,
                 elem=elem,
@@ -184,33 +147,27 @@ class Archive:
         """
         Loads/dumps message
         """
-        elem_type = msg_type if msg_type is not None else msg.__class__
+        msg_type = msg_type if msg_type is not None else msg.__class__
         if self.writing:
-            return self._dump_message(self.iobj, msg, msg_type=msg_type)
+            return self._dump_message(msg, msg_type=msg_type)
         else:
-            return self._load_message(self.iobj, msg_type, msg=msg)
+            return self._load_message(msg_type, msg=msg)
 
     def message_field(self, msg, field, fvalue=None):
         """
         Dumps/Loads message field
         """
         if self.writing:
-            self._dump_message_field(self.iobj, msg, field, fvalue=fvalue)
+            self._dump_message_field(msg, field, fvalue=fvalue)
         else:
-            self._load_message_field(self.iobj, msg, field)
-
-    def message_fields(self, msg, fields):
-        """
-        Load/dump individual message fields
-        """
-        for field in fields:
-            self.message_field(msg, field)
-        return msg
+            self._load_message_field(msg, field)
 
     def _get_type(self, elem_type):
-        # If part of our hierarchy - return the object
         if issubclass(elem_type, XmrType):
             return elem_type
+        else:
+            # Can happen due to unimport.
+            raise ValueError("XMR serialization hierarchy broken")
 
     def _is_type(self, elem_type, test_type):
         return issubclass(elem_type, test_type)
@@ -224,26 +181,22 @@ class Archive:
             fvalue = self.uvarint(get_elem(elem))
 
         elif self._is_type(etype, IntType):
-            fvalue = self.uint(elem=get_elem(elem), elem_type=elem_type)
+            fvalue = self.uint(get_elem(elem), elem_type)
 
         elif self._is_type(etype, BlobType):
-            fvalue = self.blob(elem=get_elem(elem), elem_type=elem_type, params=params)
+            fvalue = self.blob(get_elem(elem), elem_type, params)
 
         elif self._is_type(etype, UnicodeType):
             fvalue = self.unicode_type(get_elem(elem))
 
         elif self._is_type(etype, VariantType):
-            fvalue = self.variant(
-                elem=get_elem(elem), elem_type=elem_type, params=params
-            )
+            fvalue = self.variant(get_elem(elem), elem_type, params)
 
-        elif self._is_type(etype, ContainerType):  # container ~ simple list
-            fvalue = self.container(
-                container=get_elem(elem), container_type=elem_type, params=params
-            )
+        elif self._is_type(etype, ContainerType):
+            fvalue = self.container(get_elem(elem), elem_type, params)
 
         elif self._is_type(etype, MessageType):
-            fvalue = self.message(get_elem(elem), msg_type=elem_type)
+            fvalue = self.message(get_elem(elem), elem_type)
 
         else:
             raise TypeError(
@@ -252,55 +205,43 @@ class Archive:
 
         return fvalue if self.writing else set_elem(elem, fvalue)
 
-    def dump_field(self, writer, elem, elem_type, params=None):
-        assert self.iobj == writer
-        return self.field(elem=elem, elem_type=elem_type, params=params)
+    def dump_field(self, elem, elem_type, params=None):
+        return self.field(elem, elem_type, params)
 
-    def load_field(self, reader, elem_type, params=None, elem=None):
-        assert self.iobj == reader
-        return self.field(elem=elem, elem_type=elem_type, params=params)
+    def load_field(self, elem_type, params=None, elem=None):
+        return self.field(elem, elem_type, params)
 
-    def root(self):
-        """
-        Root level archive init
-        """
-
-    def _dump_container_size(self, writer, container_len, container_type, params=None):
+    def _dump_container_size(self, container_len, container_type, params=None):
         """
         Dumps container size - per element streaming
         """
         if not container_type or not container_type.FIX_SIZE:
-            dump_uvarint(writer, container_len)
+            dump_uvarint(self.iobj, container_len)
         elif container_len != container_type.SIZE:
             raise ValueError(
                 "Fixed size container has not defined size: %s" % container_type.SIZE
             )
 
-    def _dump_container_val(self, writer, elem, container_type, params=None):
-        """
-        Single elem dump
-        """
-        elem_type = container_elem_type(container_type, params)
-        self.dump_field(writer, elem, elem_type, params[1:] if params else None)
-
-    def _dump_container(self, writer, container, container_type, params=None):
+    def _dump_container(self, container, container_type, params=None):
         """
         Dumps container of elements to the writer.
         """
-        self._dump_container_size(writer, len(container), container_type)
+        self._dump_container_size(len(container), container_type)
 
         elem_type = container_elem_type(container_type, params)
 
         for elem in container:
-            self.dump_field(writer, elem, elem_type, params[1:] if params else None)
+            self.dump_field(elem, elem_type, params[1:] if params else None)
 
-    def _load_container(self, reader, container_type, params=None, container=None):
+    def _load_container(self, container_type, params=None, container=None):
         """
         Loads container of elements from the reader. Supports the container ref.
         Returns loaded container.
         """
 
-        c_len = container_type.SIZE if container_type.FIX_SIZE else load_uvarint(reader)
+        c_len = (
+            container_type.SIZE if container_type.FIX_SIZE else load_uvarint(self.iobj)
+        )
         if container and c_len != len(container):
             raise ValueError("Size mismatch")
 
@@ -308,7 +249,6 @@ class Archive:
         res = container if container else []
         for i in range(c_len):
             fvalue = self.load_field(
-                reader,
                 elem_type,
                 params[1:] if params else None,
                 eref(res, i) if container else None,
@@ -317,32 +257,32 @@ class Archive:
                 res.append(fvalue)
         return res
 
-    def _dump_message_field(self, writer, msg, field, fvalue=None):
+    def _dump_message_field(self, msg, field, fvalue=None):
         """
         Dumps a message field to the writer. Field is defined by the message field specification.
         """
         fname, ftype, params = field[0], field[1], field[2:]
         fvalue = getattr(msg, fname, None) if fvalue is None else fvalue
-        self.dump_field(writer, fvalue, ftype, params)
+        self.dump_field(fvalue, ftype, params)
 
-    def _load_message_field(self, reader, msg, field):
+    def _load_message_field(self, msg, field):
         """
         Loads message field from the reader. Field is defined by the message field specification.
         Returns loaded value, supports field reference.
         """
         fname, ftype, params = field[0], field[1], field[2:]
-        self.load_field(reader, ftype, params, eref(msg, fname))
+        self.load_field(ftype, params, eref(msg, fname))
 
-    def _dump_message(self, writer, msg, msg_type=None):
+    def _dump_message(self, msg, msg_type=None):
         """
         Dumps message to the writer.
         """
         mtype = msg.__class__ if msg_type is None else msg_type
         fields = mtype.f_specs()
         for field in fields:
-            self._dump_message_field(writer, msg=msg, field=field)
+            self._dump_message_field(msg=msg, field=field)
 
-    def _load_message(self, reader, msg_type, msg=None):
+    def _load_message(self, msg_type, msg=None):
         """
         Loads message if the given type from the reader.
         Supports reading directly to existing message.
@@ -350,27 +290,25 @@ class Archive:
         msg = msg_type() if msg is None else msg
         fields = msg_type.f_specs() if msg_type else msg.__class__.f_specs()
         for field in fields:
-            self._load_message_field(reader, msg, field)
+            self._load_message_field(msg, field)
 
         return msg
 
-    def _dump_variant(self, writer, elem, elem_type=None, params=None):
+    def _dump_variant(self, elem, elem_type=None, params=None):
         """
         Dumps variant type to the writer.
         Supports both wrapped and raw variant.
         """
         if isinstance(elem, VariantType) or elem_type.WRAPS_VALUE:
-            dump_uint(writer, elem.variant_elem_type.VARIANT_CODE, 1)
-            self.dump_field(
-                writer, getattr(elem, elem.variant_elem), elem.variant_elem_type
-            )
+            dump_uint(self.iobj, elem.variant_elem_type.VARIANT_CODE, 1)
+            self.dump_field(getattr(elem, elem.variant_elem), elem.variant_elem_type)
 
         else:
             fdef = find_variant_fdef(elem_type, elem)
-            dump_uint(writer, fdef[1].VARIANT_CODE, 1)
-            self.dump_field(writer, elem, fdef[1])
+            dump_uint(self.iobj, fdef[1].VARIANT_CODE, 1)
+            self.dump_field(elem, fdef[1])
 
-    def _load_variant(self, reader, elem_type, params=None, elem=None, wrapped=None):
+    def _load_variant(self, elem_type, params=None, elem=None, wrapped=None):
         """
         Loads variant type from the reader.
         Supports both wrapped and raw variant.
@@ -383,12 +321,12 @@ class Archive:
         if is_wrapped:
             elem = elem_type() if elem is None else elem
 
-        tag = load_uint(reader, 1)
+        tag = load_uint(self.iobj, 1)
         for field in elem_type.f_specs():
             ftype = field[1]
             if ftype.VARIANT_CODE == tag:
                 fvalue = self.load_field(
-                    reader, ftype, field[2:], elem if not is_wrapped else None
+                    ftype, field[2:], elem if not is_wrapped else None
                 )
                 if is_wrapped:
                     elem.set_variant(field[0], fvalue)
