@@ -41,10 +41,8 @@ class PreMlsagHasher:
             raise ValueError("State error")
         self.state = 3
 
-        # Manual serialization of the KeyV = Container of ECKeys
-        self.rtcsig_hasher.uvarint(len(out))
-        for x in out:
-            self.rtcsig_hasher.buffer(x)
+        # Manual serialization of the ECKey
+        self.rtcsig_hasher.buffer(out)
 
     def set_ecdh(self, ecdh):
         if self.state != 2 and self.state != 3 and self.state != 4:
