@@ -11,7 +11,6 @@ from .state import State
 
 from apps.monero.controller import misc
 from apps.monero.layout import confirms
-from apps.monero.protocol import hmac_encryption_keys
 from apps.monero.xmr import crypto
 from apps.monero.xmr.enc import chacha_poly
 
