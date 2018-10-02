@@ -13,11 +13,6 @@ class KeccakXmrArchive:
     def get_digest(self):
         return self.kwriter.get_digest()
 
-    def refresh(self, ctx=None):
-        if ctx is None:
-            ctx = self.kwriter.ctx()
-        self.kwriter = get_keccak_writer(ctx=ctx)
-
     def _ar(self, xser=None):
         if self.keeping and self.ar:
             return self.ar
@@ -46,14 +41,6 @@ class KeccakXmrArchive:
     def uint(self, i, width):
         ar = self._ar(None)
         ar.uint(i, width=width)
-
-    def field(self, elem=None, elem_type=None, params=None, xser=None):
-        ar = self._ar(xser)
-        return ar.field(elem, elem_type, params)
-
-    def message_field(self, msg, field, fvalue=None, xser=None):
-        ar = self._ar(xser)
-        return ar.message_field(msg, field, fvalue)
 
     def container_size(
         self, container_len=None, container_type=None, params=None, xser=None
