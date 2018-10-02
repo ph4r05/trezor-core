@@ -41,9 +41,10 @@ class PreMlsagHasher:
             raise ValueError("State error")
         self.state = 3
 
-        from apps.monero.xmr.serialize_messages.ct_keys import KeyV
-
-        self.rtcsig_hasher.field(out, KeyV.ELEM_TYPE)
+        # Manual serialization of the KeyV = Container of ECKeys
+        self.rtcsig_hasher.uvarint(len(out))
+        for x in out:
+            self.rtcsig_hasher.buffer(x)
 
     def set_ecdh(self, ecdh):
         if self.state != 2 and self.state != 3 and self.state != 4:
@@ -71,6 +72,10 @@ class PreMlsagHasher:
             raise ValueError("State error")
 
         if raw:
+            # Avoiding problem with the memory fragmentation.
+            # If the range proof is passed as a list, hash each element
+            # as the range proof is split to multiple byte arrays while
+            # preserving the byte ordering
             if isinstance(p, list):
                 for x in p:
                     self.rsig_hasher.update(x)
