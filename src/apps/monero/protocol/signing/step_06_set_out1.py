@@ -178,7 +178,10 @@ def _range_proof(state, idx, amount, rsig_data=None):
         rsig = ring_ct.prove_range_bp_batch(state.output_amounts, state.output_masks)
         state.mem_trace("post-bp" if __debug__ else None, collect=True)
 
-        # Incremental hashing
+        # Incremental BP hashing
+        # BP is hashed with raw=False as hash does not contain L, R
+        # array sizes compared to the serialized bulletproof format
+        # thus direct serialization cannot be used.
         state.full_message_hasher.rsig_val(rsig, True, raw=False)
         state.mem_trace("post-bp-hash" if __debug__ else None, collect=True)
 
@@ -205,6 +208,9 @@ def _range_proof(state, idx, amount, rsig_data=None):
         bp_obj = misc.parse_msg(rsig_data.rsig, Bulletproof())
         rsig_data.rsig = None
 
+        # BP is hashed with raw=False as hash does not contain L, R
+        # array sizes compared to the serialized bulletproof format
+        # thus direct serialization cannot be used.
         state.full_message_hasher.rsig_val(bp_obj, True, raw=False)
         res = ring_ct.verify_bp(bp_obj, state.output_amounts, masks)
         state.assrt(res, "BP verification fail")
