@@ -258,6 +258,7 @@ def _set_out1_ecdh(state: State, dest_pub_key, amount, mask, amount_key):
     )
     recode_ecdh(ecdh_info, encode=True)
 
+    # Manual ECDH info serialization
     ecdh_info_bin = bytearray(64)
     utils.memcpy(ecdh_info_bin, 0, ecdh_info.mask, 0, 32)
     utils.memcpy(ecdh_info_bin, 32, ecdh_info.amount, 0, 32)
@@ -270,12 +271,7 @@ def _set_out1_additional_keys(state: State, dst_entr):
     additional_txkey = None
     additional_txkey_priv = None
     if state.need_additional_txkeys:
-        use_provided = state.output_count == len(state.additional_tx_private_keys)
-        additional_txkey_priv = (
-            state.additional_tx_private_keys[state.out_idx]
-            if use_provided
-            else crypto.random_scalar()
-        )
+        additional_txkey_priv = crypto.random_scalar()
 
         if dst_entr.is_subaddress:
             additional_txkey = crypto.scalarmult(
@@ -286,8 +282,7 @@ def _set_out1_additional_keys(state: State, dst_entr):
             additional_txkey = crypto.scalarmult_base(additional_txkey_priv)
 
         state.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
-        if not use_provided:
-            state.additional_tx_private_keys.append(additional_txkey_priv)
+        state.additional_tx_private_keys.append(additional_txkey_priv)
     return additional_txkey_priv
 
 
