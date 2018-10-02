@@ -19,27 +19,6 @@ class PreMlsagHasher:
         else:
             self.rtcsig_hasher = KeccakXmrArchive()
 
-    def state_save(self):
-        return (
-            self.is_simple,
-            self.state,
-            self.kc_master.ctx,
-            self.rsig_hasher,
-            self.rtcsig_hasher.ctx() if self.rtcsig_hasher else None,
-        )
-
-    def state_load(self, x):
-        from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive
-
-        self.is_simple = x[0]
-        self.state = x[1]
-        self.kc_master = x[2]
-        self.rsig_hasher = x[3]
-        if x[4]:
-            self.rtcsig_hasher = KeccakXmrArchive(x[4])
-        else:
-            self.rtcsig_hasher = None
-
     def init(self, is_simple):
         if self.state != 0:
             raise ValueError("State error")
