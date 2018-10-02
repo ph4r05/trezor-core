@@ -7,6 +7,8 @@ Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted unde
 key derived for exactly this purpose.
 """
 
+from trezor.messages.MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
+
 from .state import State
 
 from apps.monero.controller import misc
@@ -14,7 +16,7 @@ from apps.monero.layout.confirms import transaction_step
 from apps.monero.xmr import crypto, monero
 
 
-async def set_input(state: State, src_entr):
+async def set_input(state: State, src_entr: MoneroTransactionSourceEntry):
     """
     Sets UTXO one by one.
     Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.

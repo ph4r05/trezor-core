@@ -1,5 +1,3 @@
-from trezor.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
-
 from apps.monero.xmr import crypto
 from apps.monero.xmr.serialize import xmrserialize
 from apps.monero.xmr.serialize.readwriter import MemoryReaderWriter
@@ -20,46 +18,6 @@ def absolute_output_offsets_to_relative(off):
     for i in range(len(off) - 1, 0, -1):
         off[i] -= off[i - 1]
     return off
-
-
-def get_destination_view_key_pub(destinations, change_addr=None):
-    """
-    Returns destination address public view key
-    """
-    from apps.monero.xmr.sub.addr import addr_eq
-
-    addr = MoneroAccountPublicAddress(
-        spend_public_key=crypto.NULL_KEY_ENC, view_public_key=crypto.NULL_KEY_ENC
-    )
-    count = 0
-    for dest in destinations:
-        if dest.amount == 0:
-            continue
-        if change_addr and addr_eq(dest.addr, change_addr):
-            continue
-        if addr_eq(dest.addr, addr):
-            continue
-        if count > 0:
-            return crypto.NULL_KEY_ENC
-        addr = dest.addr
-        count += 1
-    return addr.view_public_key
-
-
-def encrypt_payment_id(payment_id, public_key, secret_key):
-    """
-    Encrypts payment_id hex.
-    Used in the transaction extra. Only recipient is able to decrypt.
-    """
-    derivation_p = crypto.generate_key_derivation(public_key, secret_key)
-    derivation = bytearray(33)
-    derivation = crypto.encodepoint_into(derivation, derivation_p)
-    derivation[32] = 0x8b
-    hash = crypto.cn_fast_hash(derivation)
-    pm_copy = bytearray(payment_id)
-    for i in range(8):
-        pm_copy[i] ^= hash[i]
-    return pm_copy
 
 
 def add_tx_pub_key_to_extra(tx_extra, pub_key):

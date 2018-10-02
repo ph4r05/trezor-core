@@ -158,7 +158,7 @@ def _range_proof(state, idx, amount, rsig_data=None):
 
     # Batching
     bidx = _get_rsig_batch(state, idx)
-    batch_size = state.rsig_grp[bidx]
+    batch_size = state.rsig_grouping[bidx]
     last_in_batch = _is_last_in_batch(state, idx, bidx)
     if state.rsig_offload and provided_rsig and not last_in_batch:
         raise misc.TrezorError("Provided rsig too early")
@@ -329,8 +329,8 @@ def _is_last_in_batch(state: State, idx, bidx=None):
     Returns true if the current output is last in the rsig batch
     """
     bidx = _get_rsig_batch(state, idx) if bidx is None else bidx
-    batch_size = state.rsig_grp[bidx]
-    return (idx - sum(state.rsig_grp[:bidx])) + 1 == batch_size
+    batch_size = state.rsig_grouping[bidx]
+    return (idx - sum(state.rsig_grouping[:bidx])) + 1 == batch_size
 
 
 def _get_rsig_batch(state: State, idx):
@@ -340,7 +340,7 @@ def _get_rsig_batch(state: State, idx):
     r = 0
     c = 0
     while c < idx + 1:
-        c += state.rsig_grp[r]
+        c += state.rsig_grouping[r]
         r += 1
     return r - 1
 

@@ -17,6 +17,10 @@ class TrezorChangeAddressError(TrezorError):
     pass
 
 
+class TrezorNotEnoughOutputs(TrezorError):
+    pass
+
+
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
     from apps.monero.xmr import crypto
 

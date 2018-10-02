@@ -27,12 +27,31 @@ class State:
 
     def __init__(self, ctx):
         self.ctx = ctx
+
+        """
+        Account credentials
+        type: AccountCreds
+        - view private/public key
+        - spend private/public key
+        - and its corresponding address
+        """
         self.creds = None
-        self.key_master = None
+
+        """
+        Encryption keys
+        """
         self.key_hmac = None
         self.key_enc = None
 
-        self.tx_priv = None  # txkey
+        """
+        Transaction keys
+        - also denoted as r/R
+        - tx_priv is a random number
+        - tx_pub is equal to `r*G` or `r*D` for subaddresses
+        - for subaddresses the `r` is commonly denoted as `s`, however it is still just a random number
+        - the keys are used to derive the one time address and its keys (P = H(A*r)*G + B)
+        """
+        self.tx_priv = None
         self.tx_pub = None
 
         self.multi_sig = False
@@ -60,8 +79,8 @@ class State:
         self.output_pk_masks = []  # commitments
         self.output_amounts = []
         self.output_masks = []
-        self.rsig_type = 0
-        self.rsig_grp = []
+
+        self.rsig_grouping = []
         self.rsig_offload = 0
         self.sumout = crypto.sc_0()
         self.sumpouts_alphas = crypto.sc_0()
