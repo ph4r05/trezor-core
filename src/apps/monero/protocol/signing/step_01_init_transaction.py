@@ -60,11 +60,9 @@ async def init_transaction(
     gc.collect()
 
     # Iterative tx_prefix_hash hash computation
-    state.tx_prefix_hasher.keep()  # TODO investigate
     state.tx_prefix_hasher.uvarint(state.tx.version)
     state.tx_prefix_hasher.uvarint(state.tx.unlock_time)
-    state.tx_prefix_hasher.container_size(state.input_count)  # ContainerType
-    state.tx_prefix_hasher.release()
+    state.tx_prefix_hasher.uvarint(state.input_count)  # ContainerType, size
     state.mem_trace(10, True)
 
     # Final message hasher

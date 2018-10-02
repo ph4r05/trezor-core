@@ -45,7 +45,7 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
 
     # First output - tx prefix hasher - size of the container
     if state.out_idx == 0:
-        state.tx_prefix_hasher.container_size(state.output_count)
+        state.tx_prefix_hasher.uvarint(state.output_count)
     state.mem_trace(4, True)
 
     state.summary_outs_money += dst_entr.amount
