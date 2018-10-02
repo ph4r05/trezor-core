@@ -7,11 +7,11 @@ class PreMlsagHasher:
     """
 
     def __init__(self, state=None):
-        from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive, HashWrapper
+        from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive
 
         self.is_simple = state[0] if state else None
         self.state = state[1] if state else 0
-        self.kc_master = HashWrapper(state[2] if state else crypto.get_keccak())
+        self.kc_master = state[2] if state else crypto.get_keccak()
         self.rsig_hasher = state[3] if state else crypto.get_keccak()
         self.rtcsig_hasher = None
         if state:
@@ -29,11 +29,11 @@ class PreMlsagHasher:
         )
 
     def state_load(self, x):
-        from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive, HashWrapper
+        from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive
 
         self.is_simple = x[0]
         self.state = x[1]
-        self.kc_master = HashWrapper(x[2])
+        self.kc_master = x[2]
         self.rsig_hasher = x[3]
         if x[4]:
             self.rtcsig_hasher = KeccakXmrArchive(x[4])

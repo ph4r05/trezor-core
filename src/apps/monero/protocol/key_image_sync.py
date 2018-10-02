@@ -6,7 +6,6 @@ from apps.monero.controller import misc
 class KeyImageSync:
     def __init__(self, ctx, creds=None):
         from apps.monero.xmr import crypto
-        from apps.monero.xmr.sub.keccak_hasher import HashWrapper
 
         self.ctx = ctx
         self.creds = creds  # type: monero.AccountCreds
@@ -17,7 +16,7 @@ class KeyImageSync:
         self.blocked = None
         self.enc_key = None
         self.subaddresses = {}
-        self.hasher = HashWrapper(crypto.get_keccak())
+        self.hasher = crypto.get_keccak()
 
     async def derive_creds(self, msg):
         self.creds = await misc.monero_get_creds(

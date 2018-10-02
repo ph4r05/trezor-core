@@ -62,22 +62,6 @@ class KeccakXmrArchive:
         return ar.container_size(container_len, container_type, params)
 
 
-class HashWrapper:
-    def __init__(self, ctx):
-        self.ctx = ctx
-
-    def update(self, buf):
-        if len(buf) == 0:
-            return
-        self.ctx.update(buf)
-
-    def digest(self):
-        return self.ctx.digest()
-
-    def hexdigest(self):
-        return self.ctx.hexdigest()
-
-
 class AHashWriter:
     def __init__(self, hasher):
         self.hasher = hasher

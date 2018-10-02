@@ -36,17 +36,14 @@ def hasher_message(message):
     """
     Returns incremental hasher for MLSAG
     """
-    from apps.monero.xmr.sub.keccak_hasher import HashWrapper
-
-    ctx = HashWrapper(crypto.get_keccak())
+    ctx = crypto.get_keccak()
     ctx.update(message)
-    ctx.zbuff = bytearray(32)
     return ctx
 
 
-def hash_point(hasher, point):
-    crypto.encodepoint_into(hasher.zbuff, point)
-    hasher.update(hasher.zbuff)
+def hash_point(hasher, point, tmp_buff):
+    crypto.encodepoint_into(tmp_buff, point)
+    hasher.update(tmp_buff)
 
 
 def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
@@ -86,6 +83,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     alpha = key_vector(rows)
     rv.ss = key_matrix(rows, cols)
 
+    tmp_buff = bytearray(32)
     hasher = hasher_message(message)
 
     for i in range(dsRows):
@@ -93,8 +91,8 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
         if kLRki:
             alpha[i] = kLRki.k
             rv.II[i] = kLRki.ki
-            hash_point(hasher, kLRki.L)
-            hash_point(hasher, kLRki.R)
+            hash_point(hasher, kLRki.L, tmp_buff)
+            hash_point(hasher, kLRki.R, tmp_buff)
 
         else:
             Hi = crypto.hash_to_point(
@@ -104,16 +102,16 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
             aGi = crypto.scalarmult_base(alpha[i])
             aHPi = crypto.scalarmult(Hi, alpha[i])
             rv.II[i] = crypto.scalarmult(Hi, xx[i])
-            hash_point(hasher, aGi)
-            hash_point(hasher, aHPi)
+            hash_point(hasher, aGi, tmp_buff)
+            hash_point(hasher, aHPi, tmp_buff)
 
         Ip[i] = rv.II[i]
 
     for i in range(dsRows, rows):
         alpha[i] = crypto.random_scalar()
         aGi = crypto.scalarmult_base(alpha[i])
-        hash_point(hasher, pk[index][i])
-        hash_point(hasher, aGi)
+        hash_point(hasher, pk[index][i], tmp_buff)
+        hash_point(hasher, aGi, tmp_buff)
 
     c_old = hasher.digest()
     c_old = crypto.decodeint(c_old)
@@ -139,6 +137,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     if i == 0:
         rv.cc = c_old
 
+    tmp_buff = bytearray(32)
     while i != index:
         rv.ss[i] = scalar_gen_vector(rows)
         hasher = hasher_message(message)
@@ -149,14 +148,14 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
                 crypto.encodepoint(pk[i][j])
             )  # originally hashToPoint()
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
-            hash_point(hasher, pk[i][j])
-            hash_point(hasher, L)
-            hash_point(hasher, R)
+            hash_point(hasher, pk[i][j], tmp_buff)
+            hash_point(hasher, L, tmp_buff)
+            hash_point(hasher, R, tmp_buff)
 
         for j in range(dsRows, rows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            hash_point(hasher, pk[i][j])
-            hash_point(hasher, L)
+            hash_point(hasher, pk[i][j], tmp_buff)
+            hash_point(hasher, L, tmp_buff)
 
         c = crypto.decodeint(hasher.digest())
         c_old = c
