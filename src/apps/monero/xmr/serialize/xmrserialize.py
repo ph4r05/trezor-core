@@ -47,7 +47,6 @@ from apps.monero.xmr.serialize.message_types import (
     BlobType,
     ContainerType,
     MessageType,
-    TupleType,
     UnicodeType,
     VariantType,
     container_elem_type,
@@ -193,21 +192,6 @@ class Archive:
         else:
             raise ValueError("Not supported")
 
-    def tuple(self, elem=None, elem_type=None, params=None):
-        """
-        Loads/dumps tuple
-        """
-        if hasattr(elem_type, "serialize_archive"):
-            container = elem_type() if elem is None else elem
-            return container.serialize_archive(
-                self, elem=elem, elem_type=elem_type, params=params
-            )
-
-        if self.writing:
-            return self._dump_tuple(self.iobj, elem, elem_type, params)
-        else:
-            return self._load_tuple(self.iobj, elem_type, params=params, elem=elem)
-
     def variant(self, elem=None, elem_type=None, params=None, wrapped=None):
         """
         Loads/dumps variant type
@@ -279,7 +263,6 @@ class Archive:
             UnicodeType,
             VariantType,
             ContainerType,
-            TupleType,
             MessageType,
         )
         cname = elem_type.__name__
@@ -341,9 +324,6 @@ class Archive:
             fvalue = self.container(
                 container=get_elem(elem), container_type=elem_type, params=params
             )
-
-        elif self._is_type(etype, TupleType):  # tuple ~ simple list
-            fvalue = self.tuple(elem=get_elem(elem), elem_type=elem_type, params=params)
 
         elif self._is_type(etype, MessageType):
             fvalue = self.message(get_elem(elem), msg_type=elem_type)
@@ -417,52 +397,6 @@ class Archive:
                 eref(res, i) if container else None,
             )
             if not container:
-                res.append(fvalue)
-        return res
-
-    def _dump_tuple(self, writer, elem, elem_type, params=None):
-        """
-        Dumps tuple of elements to the writer.
-        """
-        if len(elem) != len(elem_type.f_specs()):
-            raise ValueError(
-                "Fixed size tuple has not defined size: %s" % len(elem_type.f_specs())
-            )
-        dump_uvarint(writer, len(elem))
-
-        elem_fields = params[0] if params else None
-        if elem_fields is None:
-            elem_fields = elem_type.f_specs()
-        for idx, elem in enumerate(elem):
-            self.dump_field(
-                writer, elem, elem_fields[idx], params[1:] if params else None
-            )
-
-    def _load_tuple(self, reader, elem_type, params=None, elem=None):
-        """
-        Loads tuple of elements from the reader. Supports the tuple ref.
-        Returns loaded tuple.
-        """
-
-        c_len = load_uvarint(reader)
-        if elem and c_len != len(elem):
-            raise ValueError("Size mismatch")
-        if c_len != len(elem_type.f_specs()):
-            raise ValueError("Tuple size mismatch")
-
-        elem_fields = params[0] if params else None
-        if elem_fields is None:
-            elem_fields = elem_type.f_specs()
-
-        res = elem if elem else []
-        for i in range(c_len):
-            fvalue = self.load_field(
-                reader,
-                elem_fields[i],
-                params[1:] if params else None,
-                eref(res, i) if elem else None,
-            )
-            if not elem:
                 res.append(fvalue)
         return res
 

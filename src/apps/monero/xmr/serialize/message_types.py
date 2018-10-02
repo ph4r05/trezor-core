@@ -71,12 +71,6 @@ class ContainerType(XmrType):
     ELEM_TYPE = None
 
 
-class TupleType(XmrType):
-    @classmethod
-    def f_specs(cls):
-        return ()
-
-
 class MessageType(XmrType):
     def __init__(self, **kwargs):
         for kw in kwargs:
