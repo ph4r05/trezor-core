@@ -93,11 +93,9 @@ def _set_tx_extra(state: State):
 
     state.tx.extra = tsx_helper.add_tx_pub_key_to_extra(state.tx.extra, state.tx_pub)
 
-    # Not needed to remove - extra is clean
-    # state.tx.extra = await monero.remove_field_from_tx_extra(state.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
     if state.need_additional_txkeys:
         state.tx.extra = tsx_helper.add_additional_tx_pub_keys_to_extra(
-            state.tx.extra, pub_enc=state.additional_tx_public_keys
+            state.tx.extra, state.additional_tx_public_keys
         )
 
 
