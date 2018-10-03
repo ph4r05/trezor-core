@@ -29,4 +29,4 @@ def _tsx_inputs_permutation(state: State, permutation):
     """
     state.source_permutation = permutation
     common.check_permutation(permutation)
-    state.inp_idx = -1
+    state.current_input_index = -1

@@ -68,8 +68,8 @@ class State:
 
         self.additional_tx_private_keys = []
         self.additional_tx_public_keys = []
-        self.inp_idx = -1
-        self.out_idx = -1
+        self.current_input_index = -1
+        self.current_output_index = -1
         self.summary_inputs_money = 0
         self.summary_outs_money = 0
         self.input_secrets = []

@@ -22,7 +22,7 @@ async def all_out1_set(state: State):
     await confirms.transaction_step(state.ctx, state.STEP_ALL_OUT)
     state.mem_trace(1)
 
-    if state.out_idx + 1 != state.output_count:
+    if state.current_output_index + 1 != state.output_count:
         raise ValueError("Invalid out num")
 
     # Test if \sum Alpha == \sum A
@@ -89,12 +89,10 @@ async def all_out1_set(state: State):
 
 
 def _set_tx_extra(state: State):
-    from apps.monero.xmr.sub import tsx_helper
-
-    state.tx.extra = tsx_helper.add_tx_pub_key_to_extra(state.tx.extra, state.tx_pub)
+    state.tx.extra = _add_tx_pub_key_to_extra(state.tx.extra, state.tx_pub)
 
     if state.need_additional_txkeys:
-        state.tx.extra = tsx_helper.add_additional_tx_pub_keys_to_extra(
+        state.tx.extra = _add_additional_tx_pub_keys_to_extra(
             state.tx.extra, state.additional_tx_public_keys
         )
 
@@ -110,3 +108,36 @@ def _set_tx_prefix(state: State):
 
     # Hash message to the final_message
     state.full_message_hasher.set_message(state.tx_prefix_hash)
+
+
+def _add_tx_pub_key_to_extra(tx_extra, pub_key):
+    """
+    Adds public key to the extra
+    """
+    to_add = bytearray(33)
+    to_add[0] = 1  # TX_EXTRA_TAG_PUBKEY
+    crypto.encodepoint_into(memoryview(to_add)[1:], pub_key)
+    return tx_extra + to_add
+
+
+def _add_additional_tx_pub_keys_to_extra(tx_extra, pub_enc):
+    """
+    Adds all additional tx public keys to the extra buffer
+    """
+    from apps.monero.xmr.serialize import int_serialize
+
+    # format: variant_tag (0x4) | array len varint | 32B | 32B | ...
+    num_keys = len(pub_enc)
+    len_size = int_serialize.uvarint_size(num_keys)
+    buffer = bytearray(1 + len_size + 32 * num_keys)
+
+    buffer[0] = 0x4  # TX_EXTRA_TAG_ADDITIONAL_PUBKEYS
+    int_serialize.dump_uvarint_b_into(num_keys, buffer, 1)  # uvarint(num_keys)
+    offset = 1 + len_size
+
+    for idx in range(num_keys):
+        buffer[offset : offset + 32] = pub_enc[idx]
+        offset += 32
+
+    tx_extra += buffer
+    return tx_extra

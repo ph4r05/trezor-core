@@ -39,20 +39,20 @@ async def sign_input(
     # state.state.set_signature() todo
     print("09")
     await confirms.transaction_step(
-        state.ctx, state.STEP_SIGN, state.inp_idx + 1, state.input_count
+        state.ctx, state.STEP_SIGN, state.current_input_index + 1, state.input_count
     )
 
-    state.inp_idx += 1
-    if state.inp_idx >= state.input_count:
+    state.current_input_index += 1
+    if state.current_input_index >= state.input_count:
         raise ValueError("Invalid ins")
     if state.use_simple_rct and alpha_enc is None:
         raise ValueError("Inconsistent1")
     if state.use_simple_rct and pseudo_out is None:
         raise ValueError("Inconsistent2")
-    if state.inp_idx >= 1 and not state.use_simple_rct:
+    if state.current_input_index >= 1 and not state.use_simple_rct:
         raise ValueError("Inconsistent3")
 
-    inv_idx = state.source_permutation[state.inp_idx]
+    inv_idx = state.source_permutation[state.current_input_index]
 
     # Check HMAC of all inputs
     hmac_vini_comp = await hmac_encryption_keys.gen_hmac_vini(
@@ -85,8 +85,10 @@ async def sign_input(
         pseudo_out_c = crypto.decodepoint(pseudo_out)
 
     elif state.use_simple_rct:
-        alpha_c = state.input_alphas[state.inp_idx]
-        pseudo_out_c = crypto.decodepoint(state.input_pseudo_outs[state.inp_idx])
+        alpha_c = state.input_alphas[state.current_input_index]
+        pseudo_out_c = crypto.decodepoint(
+            state.input_pseudo_outs[state.current_input_index]
+        )
 
     else:
         alpha_c = None
@@ -177,7 +179,7 @@ async def sign_input(
     state.mem_trace(6)
 
     # Final state transition
-    if state.inp_idx + 1 == state.input_count:
+    if state.current_input_index + 1 == state.input_count:
         # state.state.set_signature_done()  todo remove?
         await confirms.transaction_signed(state.ctx)
 

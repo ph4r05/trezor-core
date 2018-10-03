@@ -19,22 +19,27 @@ async def input_vini(
     )
 
     await confirms.transaction_step(
-        state.ctx, state.STEP_VINI, state.inp_idx + 1, state.input_count
+        state.ctx, state.STEP_VINI, state.current_input_index + 1, state.input_count
     )
 
-    if state.inp_idx >= state.input_count:
+    if state.current_input_index >= state.input_count:
         raise ValueError("Too many inputs")
 
-    state.inp_idx += 1
+    state.current_input_index += 1
 
     # HMAC(T_in,i || vin_i)
     hmac_vini = await hmac_encryption_keys.gen_hmac_vini(
-        state.key_hmac, src_entr, vini_bin, state.source_permutation[state.inp_idx]
+        state.key_hmac,
+        src_entr,
+        vini_bin,
+        state.source_permutation[state.current_input_index],
     )
     if not common.ct_equal(hmac_vini, hmac):
         raise ValueError("HMAC is not correct")
 
-    hash_vini_pseudo_out(state, vini_bin, state.inp_idx, pseudo_out, pseudo_out_hmac)
+    hash_vini_pseudo_out(
+        state, vini_bin, state.current_input_index, pseudo_out, pseudo_out_hmac
+    )
 
     # TODO check input count?
     return MoneroTransactionInputViniAck()

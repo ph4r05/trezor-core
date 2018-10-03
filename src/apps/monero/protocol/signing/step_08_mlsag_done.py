@@ -18,8 +18,8 @@ async def mlsag_done(state: State):
     _ecdh_info(state)
     _out_pk(state)
     state.full_message_hasher.rctsig_base_done()
-    state.out_idx = -1
-    state.inp_idx = -1
+    state.current_output_index = -1
+    state.current_input_index = -1
 
     state.full_message = state.full_message_hasher.get_digest()
     state.full_message_hasher = None

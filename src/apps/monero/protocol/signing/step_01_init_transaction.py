@@ -53,7 +53,7 @@ async def init_transaction(
     _check_subaddresses(state, tsx_data.outputs)
 
     # Extra processing, payment id
-    state.tx.version = 2  # current Monero transaction format
+    state.tx.version = 2  # current Monero transaction format (RingCT = 2)
     state.tx.unlock_time = tsx_data.unlock_time
     _process_payment_id(state, tsx_data)
     await _compute_sec_keys(state, tsx_data)

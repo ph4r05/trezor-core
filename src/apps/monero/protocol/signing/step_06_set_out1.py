@@ -19,16 +19,16 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     mods = utils.unimport_begin()
 
     await confirms.transaction_step(
-        state.ctx, state.STEP_OUT, state.out_idx + 1, state.output_count
+        state.ctx, state.STEP_OUT, state.current_output_index + 1, state.output_count
     )
     state.mem_trace(1)
 
     if (
-        state.inp_idx + 1 != state.input_count
+        state.current_input_index + 1 != state.input_count
     ):  # todo check state.state.is_input_vins() - needed?
         raise ValueError("Invalid number of inputs")
 
-    state.out_idx += 1
+    state.current_output_index += 1
     state.mem_trace(2, True)
 
     if dst_entr.amount <= 0 and state.tx.version <= 1:
@@ -36,7 +36,7 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
 
     # HMAC check of the destination
     dst_entr_hmac_computed = await hmac_encryption_keys.gen_hmac_tsxdest(
-        state.key_hmac, dst_entr, state.out_idx
+        state.key_hmac, dst_entr, state.current_output_index
     )
     if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
         raise ValueError("HMAC invalid")
@@ -44,7 +44,7 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     state.mem_trace(3, True)
 
     # First output - tx prefix hasher - size of the container
-    if state.out_idx == 0:
+    if state.current_output_index == 0:
         state.tx_prefix_hasher.uvarint(state.output_count)
     state.mem_trace(4, True)
 
@@ -53,16 +53,20 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     state.mem_trace(5, True)
 
     # Range proof first, memory intensive
-    rsig, mask = _range_proof(state, state.out_idx, dst_entr.amount, rsig_data)
+    rsig, mask = _range_proof(
+        state, state.current_output_index, dst_entr.amount, rsig_data
+    )
     utils.unimport_end(mods)
     state.mem_trace(6, True)
 
     # Amount key, tx out key
     additional_txkey_priv = _set_out1_additional_keys(state, dst_entr)
     derivation = _set_out1_derivation(state, dst_entr, additional_txkey_priv)
-    amount_key = crypto.derivation_to_scalar(derivation, state.out_idx)
+    amount_key = crypto.derivation_to_scalar(derivation, state.current_output_index)
     tx_out_key = crypto.derive_public_key(
-        derivation, state.out_idx, crypto.decodepoint(dst_entr.addr.spend_public_key)
+        derivation,
+        state.current_output_index,
+        crypto.decodepoint(dst_entr.addr.spend_public_key),
     )
     del (derivation, additional_txkey_priv)
     state.mem_trace(7, True)
@@ -124,7 +128,7 @@ async def _set_out1_tx_out(state: State, dst_entr, tx_out_key):
 
     # Hmac dest_entr.
     hmac_vouti = await hmac_encryption_keys.gen_hmac_vouti(
-        state.key_hmac, dst_entr, tx_out_bin, state.out_idx
+        state.key_hmac, dst_entr, tx_out_bin, state.current_output_index
     )
     state.mem_trace(10, True)
     return tx_out_bin, hmac_vouti
