@@ -62,16 +62,9 @@ async def all_out1_set(state: State):
     gc.collect()
     state.mem_trace(4)
 
-    # Txprefix match check for multisig
-    if not common.is_empty(state.exp_tx_prefix_hash) and not common.ct_equal(
-        state.exp_tx_prefix_hash, state.tx_prefix_hash
-    ):
-        # state.state.set_fail()  todo needed?
-        # todo   raise wire.NotEnoughFunds(e.message) ??
-        raise misc.TrezorTxPrefixHashNotMatchingError("Tx prefix invalid")
-
-    gc.collect()
-    state.mem_trace(5)
+    # In the multisig mode here needs to be a check whether currently computed
+    # transaction prefix matches expected transaction prefix sent in the
+    # init step.
 
     from trezor.messages.MoneroRingCtSig import MoneroRingCtSig
     from trezor.messages.MoneroTransactionAllOutSetAck import (

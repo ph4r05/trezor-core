@@ -110,7 +110,7 @@ async def sign_input(
     # Basic setup, sanity check
     index = src_entr.real_output
     in_sk = CtKey(dest=input_secret, mask=crypto.decodeint(src_entr.mask))
-    kLRki = src_entr.multisig_kLRki if state.multi_sig else None
+    kLRki = None  # for multisig: src_entr.multisig_kLRki
 
     # Private key correctness test
     state.assrt(
@@ -139,14 +139,7 @@ async def sign_input(
         # Simple RingCT
         mix_ring = [x.key for x in src_entr.outputs]
         mg, msc = mlsag2.prove_rct_mg_simple(
-            state.full_message,
-            mix_ring,
-            in_sk,
-            alpha_c,
-            pseudo_out_c,
-            kLRki,
-            None,
-            index,
+            state.full_message, mix_ring, in_sk, alpha_c, pseudo_out_c, kLRki, index
         )
 
     else:
@@ -161,7 +154,6 @@ async def sign_input(
             state.output_sk_masks,
             state.output_pk_masks,
             kLRki,
-            None,
             index,
             txn_fee_key,
         )

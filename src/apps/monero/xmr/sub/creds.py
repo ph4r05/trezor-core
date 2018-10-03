@@ -23,7 +23,6 @@ class AccountCreds:
         self.spend_key_public = spend_key_public
         self.address = address
         self.network_type = network_type
-        self.multisig_keys = []
 
     @classmethod
     def new_wallet(

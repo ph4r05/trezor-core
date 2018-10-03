@@ -71,8 +71,8 @@ async def set_input(state: State, src_entr: MoneroTransactionSourceEntry):
     state.mem_trace(1, True)
 
     # Construct tx.vin
-    ki_real = src_entr.multisig_kLRki.ki if state.multi_sig else ki
-    vini = TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki_real))
+    # If multisig is used then ki in vini should be src_entr.multisig_kLRki.ki
+    vini = TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
     vini.key_offsets = _absolute_output_offsets_to_relative(
         [x.idx for x in src_entr.outputs]
     )

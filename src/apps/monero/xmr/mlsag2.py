@@ -46,7 +46,7 @@ def hash_point(hasher, point, tmp_buff):
     hasher.update(tmp_buff)
 
 
-def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
+def gen_mlsag_assert(pk, xx, kLRki, index, dsRows):
     """
     Conditions check for gen_mlsag_ext.
     """
@@ -67,10 +67,10 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
         raise ValueError("Bad xx size")
     if dsRows > rows:
         raise ValueError("Bad dsRows size")
-    if (not kLRki or not mscout) and (kLRki or mscout):
-        raise ValueError("Only one of kLRki/mscout is present")
     if kLRki and dsRows != 1:
         raise ValueError("Multisig requires exactly 1 dsRows")
+    if kLRki:
+        raise NotImplementedError("Multisig not implemented")
     return rows, cols
 
 
@@ -89,15 +89,14 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     for i in range(dsRows):
         hasher.update(crypto.encodepoint(pk[index][i]))
         if kLRki:
-            alpha[i] = kLRki.k
-            rv.II[i] = kLRki.ki
-            hash_point(hasher, kLRki.L, tmp_buff)
-            hash_point(hasher, kLRki.R, tmp_buff)
+            raise NotImplementedError("Multisig not implemented")
+            # alpha[i] = kLRki.k
+            # rv.II[i] = kLRki.ki
+            # hash_point(hasher, kLRki.L, tmp_buff)
+            # hash_point(hasher, kLRki.R, tmp_buff)
 
         else:
-            Hi = crypto.hash_to_point(
-                crypto.encodepoint(pk[index][i])
-            )  # originally hashToPoint()
+            Hi = crypto.hash_to_point(crypto.encodepoint(pk[index][i]))
             alpha[i] = crypto.random_scalar()
             aGi = crypto.scalarmult_base(alpha[i])
             aHPi = crypto.scalarmult(Hi, alpha[i])
@@ -118,13 +117,13 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     return c_old, Ip, alpha
 
 
-def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+def gen_mlsag_ext(message, pk, xx, kLRki, index, dsRows):
     """
     Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
     """
     from apps.monero.xmr.serialize_messages.tx_full import MgSig
 
-    rows, cols = gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows)
+    rows, cols = gen_mlsag_assert(pk, xx, kLRki, index, dsRows)
 
     rv = MgSig()
     c, L, R, Hi = 0, None, None, None
@@ -144,9 +143,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
         for j in range(dsRows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_point(
-                crypto.encodepoint(pk[i][j])
-            )  # originally hashToPoint()
+            Hi = crypto.hash_to_point(crypto.encodepoint(pk[i][j]))
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
             hash_point(hasher, pk[i][j], tmp_buff)
             hash_point(hasher, L, tmp_buff)
@@ -165,18 +162,13 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             rv.cc = c_old
 
     for j in range(rows):
-        rv.ss[index][j] = crypto.sc_mulsub(
-            c, xx[j], alpha[j]
-        )  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
-
-    if mscout:
-        mscout(c)
+        rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])
 
     return rv, c
 
 
 def prove_rct_mg(
-    message, pubs, in_sk, out_sk_mask, out_pk_mask, kLRki, mscout, index, txn_fee_key
+    message, pubs, in_sk, out_sk_mask, out_pk_mask, kLRki, index, txn_fee_key
 ):
     """
     c.f. http://eprint.iacr.org/2015/1098 section 4. definition 10.
@@ -198,8 +190,6 @@ def prove_rct_mg(
         raise ValueError("Bad inSk size")
     if len(out_sk_mask) != len(out_pk_mask):
         raise ValueError("Bad outsk/putpk size")
-    if (not kLRki or not mscout) and (kLRki and mscout):
-        raise ValueError("Only one of kLRki/mscout is present")
 
     sk = key_vector(rows + 1)
     M = key_matrix(rows + 1, cols)
@@ -233,10 +223,10 @@ def prove_rct_mg(
             sk[rows], out_sk_mask[j]
         )  # subtract output masks in last row
 
-    return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
+    return gen_mlsag_ext(message, M, sk, kLRki, index, rows)
 
 
-def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
+def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, index):
     """
     Simple version for when we assume only
         post rct inputs
@@ -248,7 +238,6 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     :param a: mask from the pseudo_output commitment (alpha)
     :param cout: point, decoded. Pseudo output public key.
     :param kLRki:
-    :param mscout: lambda accepting c
     :param index:
     :return:
     """
@@ -256,8 +245,6 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     cols = len(pubs)
     if cols == 0:
         raise ValueError("Empty pubs")
-    if (not kLRki or not mscout) and (kLRki and mscout):
-        raise ValueError("Only one of kLRki/mscout is present")
 
     sk = key_vector(rows + 1)
     M = key_matrix(rows + 1, cols)
@@ -269,4 +256,4 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
         M[i][0] = crypto.decodepoint(pubs[i].dest)
         M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), cout)
 
-    return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
+    return gen_mlsag_ext(message, M, sk, kLRki, index, rows)
