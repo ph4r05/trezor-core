@@ -9,10 +9,6 @@ class TrezorSecurityError(TrezorError):
     pass
 
 
-class TrezorTxPrefixHashNotMatchingError(TrezorError):
-    pass
-
-
 class TrezorChangeAddressError(TrezorError):
     pass
 
