@@ -15,7 +15,7 @@ async def input_vini(
     state: State, src_entr, vini_bin, hmac, pseudo_out, pseudo_out_hmac
 ):
     from trezor.messages.MoneroTransactionInputViniAck import (
-        MoneroTransactionInputViniAck
+        MoneroTransactionInputViniAck,
     )
 
     await confirms.transaction_step(

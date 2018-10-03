@@ -9,7 +9,7 @@ from apps.monero.layout import confirms
 
 async def mlsag_done(state: State):
     from trezor.messages.MoneroTransactionMlsagDoneAck import (
-        MoneroTransactionMlsagDoneAck
+        MoneroTransactionMlsagDoneAck,
     )
 
     # state.state.set_final_message_done()  todo needed?

@@ -18,7 +18,7 @@ from apps.monero.layout.confirms import transaction_step
 
 async def tsx_inputs_permutation(state: State, permutation: list):
     from trezor.messages.MoneroTransactionInputsPermutationAck import (
-        MoneroTransactionInputsPermutationAck
+        MoneroTransactionInputsPermutationAck,
     )
 
     await transaction_step(state.ctx, state.STEP_PERM)

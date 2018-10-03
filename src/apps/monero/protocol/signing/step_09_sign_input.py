@@ -187,7 +187,7 @@ async def sign_input(
     state.mem_trace()
 
     from trezor.messages.MoneroTransactionSignInputAck import (
-        MoneroTransactionSignInputAck
+        MoneroTransactionSignInputAck,
     )
 
     return MoneroTransactionSignInputAck(

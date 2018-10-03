@@ -53,7 +53,7 @@ class TxoutTargetV(VariantType):
 
 class TxinGen(MessageType):
     __slots__ = ("height",)
-    VARIANT_CODE = 0xff
+    VARIANT_CODE = 0xFF
 
     @classmethod
     def f_specs(cls):

@@ -98,7 +98,7 @@ async def set_out1(state: State, dst_entr, dst_entr_hmac, rsig_data=None):
     state.mem_trace(14, True)
 
     from trezor.messages.MoneroTransactionSetOutputAck import (
-        MoneroTransactionSetOutputAck
+        MoneroTransactionSetOutputAck,
     )
 
     out_pk_bin = bytearray(64)

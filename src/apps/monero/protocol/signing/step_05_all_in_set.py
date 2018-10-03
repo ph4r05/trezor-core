@@ -19,7 +19,7 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
     await confirms.transaction_step(state.ctx, state.STEP_ALL_IN)
 
     from trezor.messages.MoneroTransactionAllInputsSetAck import (
-        MoneroTransactionAllInputsSetAck
+        MoneroTransactionAllInputsSetAck,
     )
     from trezor.messages.MoneroTransactionRsigData import MoneroTransactionRsigData
 

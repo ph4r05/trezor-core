@@ -75,7 +75,7 @@ async def all_out1_set(state: State):
 
     from trezor.messages.MoneroRingCtSig import MoneroRingCtSig
     from trezor.messages.MoneroTransactionAllOutSetAck import (
-        MoneroTransactionAllOutSetAck
+        MoneroTransactionAllOutSetAck,
     )
 
     # Initializes RCTsig structure (fee, tx prefix hash, type)

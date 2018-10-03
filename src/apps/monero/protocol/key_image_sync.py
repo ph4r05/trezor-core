@@ -30,7 +30,7 @@ class KeyImageSync:
         from trezor.messages import FailureType
         from trezor.messages.Failure import Failure
         from trezor.messages.MoneroKeyImageExportInitAck import (
-            MoneroKeyImageExportInitAck
+            MoneroKeyImageExportInitAck,
         )
 
         self.ctx = ctx
@@ -97,7 +97,7 @@ class KeyImageSync:
     async def final(self, ctx, msg=None):
         from apps.monero.layout import confirms
         from trezor.messages.MoneroKeyImageSyncFinalAck import (
-            MoneroKeyImageSyncFinalAck
+            MoneroKeyImageSyncFinalAck,
         )
 
         self.ctx = ctx

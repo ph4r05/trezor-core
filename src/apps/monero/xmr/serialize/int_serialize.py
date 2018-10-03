@@ -21,7 +21,7 @@ def dump_uint(writer, n, width):
     """
     buffer = _UINT_BUFFER
     for _ in range(width):
-        buffer[0] = n & 0xff
+        buffer[0] = n & 0xFF
         writer.write(buffer)
         n >>= 8
 
@@ -79,7 +79,7 @@ def dump_uint_b_into(n, width, buffer, offset=0):
     Serializes fixed size integer to the buffer
     """
     for idx in range(width):
-        buffer[idx + offset] = n & 0xff
+        buffer[idx + offset] = n & 0xFF
         n >>= 8
     return buffer
 
