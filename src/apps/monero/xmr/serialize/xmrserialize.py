@@ -269,8 +269,8 @@ class Archive:
         Loads message field from the reader. Field is defined by the message field specification.
         Returns loaded value, supports field reference.
         """
-        fname, ftype, params = field[0], field[1], field[2:]
-        return self.load_field(ftype, params, None)
+        ftype, params = field[1], field[2:]
+        return self.load_field(ftype, params)
 
     def _dump_message(self, msg, msg_type=None):
         """
