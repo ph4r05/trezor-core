@@ -12,7 +12,7 @@ sleep 1
 export TREZOR_PATH=udp:127.0.0.1:21324
 
 # run tests
-cd ../tests
+cd ..
 
 export EC_BACKEND_FORCE=1
 export EC_BACKEND=1
