@@ -84,16 +84,6 @@ async def sign_input(
         )
         pseudo_out_c = crypto.decodepoint(pseudo_out)
 
-    elif state.use_simple_rct:
-        alpha_c = state.input_alphas[state.current_input_index]
-        pseudo_out_c = crypto.decodepoint(
-            state.input_pseudo_outs[state.current_input_index]
-        )
-
-    else:
-        alpha_c = None
-        pseudo_out_c = None
-
     # Spending secret
     from apps.monero.xmr.enc import chacha_poly
     from apps.monero.xmr.serialize_messages.ct_keys import CtKey
