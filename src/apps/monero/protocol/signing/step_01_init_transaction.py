@@ -38,8 +38,8 @@ async def init_transaction(
     state.mixin = tsx_data.mixin
     state.fee = tsx_data.fee
     state.account_idx = tsx_data.account
-    state.multi_sig = tsx_data.is_multisig
-    state.exp_tx_prefix_hash = tsx_data.exp_tx_prefix_hash
+    if tsx_data.is_multisig:
+        raise NotImplementedError("Multisig is not implemented")
 
     # Ensure change is correct
     _check_change(state, tsx_data.outputs)

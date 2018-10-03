@@ -27,7 +27,7 @@ async def tsx_inputs_permutation(state: State, permutation: list):
     Set permutation on the inputs - sorted by key image on host.
     """
     if len(permutation) != state.input_count:
-        raise ValueError('Invalid permutation size')
+        raise ValueError("Invalid permutation size")
     _check_permutation(permutation)
 
     state.source_permutation = permutation

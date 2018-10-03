@@ -15,7 +15,6 @@ async def mlsag_done(state: State):
     # state.state.set_final_message_done()  todo needed?
     await confirms.transaction_step(state.ctx, state.STEP_MLSAG)
 
-    _ecdh_info(state)
     _out_pk(state)
     state.full_message_hasher.rctsig_base_done()
     state.current_output_index = -1
@@ -25,13 +24,6 @@ async def mlsag_done(state: State):
     state.full_message_hasher = None
 
     return MoneroTransactionMlsagDoneAck(full_message_hash=state.full_message)
-
-
-def _ecdh_info(state: State):  # todo why is it here? remove
-    """
-    Sets ecdh info for the incremental hashing mlsag.
-    """
-    pass
 
 
 def _out_pk(state: State):

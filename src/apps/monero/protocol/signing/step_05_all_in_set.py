@@ -29,7 +29,8 @@ async def all_in_set(state: State, rsig_data):  # todo: rsig_data not used?
     if not state.rsig_offload:
         return resp
 
-    # Simple offloading - generate random masks that sum to the input mask sum.
+    # Simple range proof offloading
+    # Generate random commitment masks that sum to the input mask sum.
     tmp_buff = bytearray(32)
     rsig_data.mask = bytearray(32 * state.output_count)
     state.sumout = crypto.sc_init(0)

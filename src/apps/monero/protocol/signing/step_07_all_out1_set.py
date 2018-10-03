@@ -8,9 +8,8 @@ import gc
 
 from .state import State
 
-from apps.monero.controller import misc
 from apps.monero.layout import confirms
-from apps.monero.xmr import common, crypto
+from apps.monero.xmr import crypto
 
 
 async def all_out1_set(state: State):
