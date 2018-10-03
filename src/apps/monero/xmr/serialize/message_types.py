@@ -87,18 +87,6 @@ class MessageType(XmrType):
     def f_specs(cls):
         return ()
 
-    def _field(self, fname=None, idx=None):
-        fld = None
-        specs = self.f_specs()
-        if fname is not None:
-            fld = [x for x in specs if x[0] == fname][0]
-        elif idx is not None:
-            fld = specs[idx]
-        return fld
-
-    def _msg_field(self, ar, fname=None, idx=None, **kwargs):
-        return ar.message_field(self, self._field(fname=fname, idx=idx), **kwargs)
-
 
 def container_elem_type(container_type, params):
     """

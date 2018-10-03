@@ -32,7 +32,6 @@ required:
 '''
 
 from apps.monero.xmr.serialize.base_types import IntType, UVarintType, XmrType
-from apps.monero.xmr.serialize.erefs import eref, get_elem, set_elem
 from apps.monero.xmr.serialize.int_serialize import (
     dump_uint,
     dump_uvarint,
@@ -158,9 +157,9 @@ class Archive:
         Dumps/Loads message field
         """
         if self.writing:
-            self._dump_message_field(msg, field, fvalue=fvalue)
+            return self._dump_message_field(msg, field, fvalue=fvalue)
         else:
-            self._load_message_field(msg, field)
+            return self._load_message_field(field)
 
     def _get_type(self, elem_type):
         if issubclass(elem_type, XmrType):
@@ -178,32 +177,32 @@ class Archive:
 
         etype = self._get_type(elem_type)
         if self._is_type(etype, UVarintType):
-            fvalue = self.uvarint(get_elem(elem))
+            fvalue = self.uvarint(elem)
 
         elif self._is_type(etype, IntType):
-            fvalue = self.uint(get_elem(elem), elem_type)
+            fvalue = self.uint(elem, elem_type)
 
         elif self._is_type(etype, BlobType):
-            fvalue = self.blob(get_elem(elem), elem_type, params)
+            fvalue = self.blob(elem, elem_type, params)
 
         elif self._is_type(etype, UnicodeType):
-            fvalue = self.unicode_type(get_elem(elem))
+            fvalue = self.unicode_type(elem)
 
         elif self._is_type(etype, VariantType):
-            fvalue = self.variant(get_elem(elem), elem_type, params)
+            fvalue = self.variant(elem, elem_type, params)
 
         elif self._is_type(etype, ContainerType):
-            fvalue = self.container(get_elem(elem), elem_type, params)
+            fvalue = self.container(elem, elem_type, params)
 
         elif self._is_type(etype, MessageType):
-            fvalue = self.message(get_elem(elem), elem_type)
+            fvalue = self.message(elem, elem_type)
 
         else:
             raise TypeError(
                 "unknown type: %s %s %s" % (elem_type, type(elem_type), elem)
             )
 
-        return fvalue if self.writing else set_elem(elem, fvalue)
+        return fvalue
 
     def dump_field(self, elem, elem_type, params=None):
         return self.field(elem, elem_type, params)
@@ -251,7 +250,7 @@ class Archive:
             fvalue = self.load_field(
                 elem_type,
                 params[1:] if params else None,
-                eref(res, i) if container else None,
+                None,
             )
             if not container:
                 res.append(fvalue)
@@ -265,13 +264,13 @@ class Archive:
         fvalue = getattr(msg, fname, None) if fvalue is None else fvalue
         self.dump_field(fvalue, ftype, params)
 
-    def _load_message_field(self, msg, field):
+    def _load_message_field(self, field):
         """
         Loads message field from the reader. Field is defined by the message field specification.
         Returns loaded value, supports field reference.
         """
         fname, ftype, params = field[0], field[1], field[2:]
-        self.load_field(ftype, params, eref(msg, fname))
+        return self.load_field(ftype, params, None)
 
     def _dump_message(self, msg, msg_type=None):
         """
@@ -290,7 +289,8 @@ class Archive:
         msg = msg_type() if msg is None else msg
         fields = msg_type.f_specs() if msg_type else msg.__class__.f_specs()
         for field in fields:
-            self._load_message_field(msg, field)
+            fval = self._load_message_field(field)
+            setattr(msg, field[0], fval)
 
         return msg
 
