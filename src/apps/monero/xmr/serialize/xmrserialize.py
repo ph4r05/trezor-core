@@ -62,7 +62,7 @@ class Archive:
     in C++ code. see: eref(), get_elem(), set_elem()
     """
 
-    def __init__(self, iobj, writing=True, **kwargs):
+    def __init__(self, iobj, writing=True):
         self.writing = writing
         self.iobj = iobj
 
@@ -99,9 +99,9 @@ class Archive:
         """
         elem_type = elem_type if elem_type else elem.__class__
         if self.writing:
-            return dump_blob(self.iobj, elem=elem, elem_type=elem_type, params=params)
+            return dump_blob(self.iobj, elem, elem_type, params)
         else:
-            return load_blob(self.iobj, elem_type=elem_type, params=params, elem=elem)
+            return load_blob(self.iobj, elem_type, params, elem)
 
     def container(self, container=None, container_type=None, params=None):
         """
@@ -110,9 +110,7 @@ class Archive:
         if self.writing:
             return self._dump_container(container, container_type, params)
         else:
-            return self._load_container(
-                container_type, params=params, container=container
-            )
+            return self._load_container(container_type, params, container)
 
     def container_size(self, container_len=None, container_type=None, params=None):
         """
@@ -130,16 +128,11 @@ class Archive:
         elem_type = elem_type if elem_type else elem.__class__
         if self.writing:
             return self._dump_variant(
-                elem=elem,
-                elem_type=elem_type if elem_type else elem.__class__,
-                params=params,
+                elem, elem_type if elem_type else elem.__class__, params
             )
         else:
             return self._load_variant(
-                elem_type=elem_type if elem_type else elem.__class__,
-                params=params,
-                elem=elem,
-                wrapped=wrapped,
+                elem_type if elem_type else elem.__class__, params, elem, wrapped
             )
 
     def message(self, msg, msg_type=None):
@@ -148,16 +141,16 @@ class Archive:
         """
         msg_type = msg_type if msg_type is not None else msg.__class__
         if self.writing:
-            return self._dump_message(msg, msg_type=msg_type)
+            return self._dump_message(msg, msg_type)
         else:
-            return self._load_message(msg_type, msg=msg)
+            return self._load_message(msg_type, msg)
 
     def message_field(self, msg, field, fvalue=None):
         """
         Dumps/Loads message field
         """
         if self.writing:
-            return self._dump_message_field(msg, field, fvalue=fvalue)
+            return self._dump_message_field(msg, field, fvalue)
         else:
             return self._load_message_field(field)
 
@@ -247,13 +240,8 @@ class Archive:
         elem_type = container_elem_type(container_type, params)
         res = container if container else []
         for i in range(c_len):
-            fvalue = self.load_field(
-                elem_type,
-                params[1:] if params else None,
-                None,
-            )
-            if not container:
-                res.append(fvalue)
+            fvalue = self.load_field(elem_type, params[1:] if params else None)
+            res.append(fvalue)
         return res
 
     def _dump_message_field(self, msg, field, fvalue=None):
