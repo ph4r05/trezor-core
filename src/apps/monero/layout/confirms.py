@@ -150,14 +150,6 @@ async def transaction_finished(ctx):
     await common.ui_text(text, tm=500 * 1000)
 
 
-async def transaction_signed(ctx):
-    """
-    Notifies the transaction was completely signed
-    """
-    # todo
-    pass
-
-
 async def transaction_step(ctx, step, sub_step=None, sub_step_total=None):
     from trezor import ui
     from trezor.ui.text import Text
@@ -178,8 +170,6 @@ async def transaction_step(ctx, step, sub_step=None, sub_step_total=None):
     elif step == 500:
         info = ["Postprocessing..."]
     elif step == 600:
-        info = ["Postprocessing..."]
-    elif step == 700:
         info = ["Signing inputs", "%d/%d" % (sub_step + 1, sub_step_total)]
     else:
         info = ["Processing..."]
@@ -188,23 +178,3 @@ async def transaction_step(ctx, step, sub_step=None, sub_step_total=None):
     text.normal(*info)
 
     await common.simple_text(text, tm=10 * 1000)
-
-
-async def confirm_ki_sync(ctx, init_msg):
-    await require_confirm_keyimage_sync(ctx)
-    return True
-
-
-async def ki_error(ctx, e):
-    # todo
-    pass
-
-
-async def ki_step(ctx, i):
-    # todo
-    pass
-
-
-async def ki_finished(ctx):
-    # todo
-    pass

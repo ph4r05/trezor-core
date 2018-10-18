@@ -6,8 +6,10 @@ import gc
 
 from apps.monero.controller import misc
 from apps.monero.layout import confirms
+from apps.monero.protocol.signing.rct_type import RctType
+from apps.monero.protocol.signing.rsig_type import RsigType
 from apps.monero.protocol.signing.state import State
-from apps.monero.xmr import common, crypto, monero
+from apps.monero.xmr import crypto, monero
 
 if False:
     from trezor.messages.MoneroTransactionData import MoneroTransactionData
@@ -38,8 +40,6 @@ async def init_transaction(
     state.mixin = tsx_data.mixin
     state.fee = tsx_data.fee
     state.account_idx = tsx_data.account
-    if tsx_data.is_multisig:
-        raise NotImplementedError("Multisig is not implemented")
 
     # Ensure change is correct
     _check_change(state, tsx_data.outputs)
@@ -49,7 +49,7 @@ async def init_transaction(
     if state.output_count < 2:
         raise misc.TrezorNotEnoughOutputs("At least two outputs are required")
 
-    _check_ringct_type(state, tsx_data.rsig_data)
+    _check_rsig_data(state, tsx_data.rsig_data)
     _check_subaddresses(state, tsx_data.outputs)
 
     # Extra processing, payment id
@@ -66,8 +66,10 @@ async def init_transaction(
     state.mem_trace(10, True)
 
     # Final message hasher
-    state.full_message_hasher.init(state.use_simple_rct)  # TODO investigate
-    state.full_message_hasher.set_type_fee(state.get_rct_type(), state.fee)
+    state.full_message_hasher.init(state.rct_type == RctType.Simple)
+    state.full_message_hasher.set_type_fee(
+        misc.get_monero_rct_type(state.rct_type, state.rsig_type), state.fee
+    )
 
     # Sub address precomputation
     if tsx_data.account is not None and tsx_data.minor_indices:
@@ -92,13 +94,7 @@ async def init_transaction(
 
     rsig_data = MoneroTransactionRsigData(offload_type=state.rsig_offload)
 
-    return MoneroTransactionInitAck(
-        in_memory=False,
-        many_inputs=True,
-        many_outputs=True,
-        hmacs=hmacs,
-        rsig_data=rsig_data,
-    )
+    return MoneroTransactionInitAck(hmacs=hmacs, rsig_data=rsig_data)
 
 
 def _check_subaddresses(state: State, outputs: list):
@@ -160,7 +156,7 @@ def _get_primary_change_address(state: State):
     )
 
 
-def _check_ringct_type(state: State, rsig_data: MoneroTransactionRsigData):
+def _check_rsig_data(state: State, rsig_data: MoneroTransactionRsigData):
     """
     There are two types of monero ring confidential transactions:
     1. RCTTypeFull = 1 (used if num_inputs == 1)
@@ -172,11 +168,36 @@ def _check_ringct_type(state: State, rsig_data: MoneroTransactionRsigData):
     3. RangeProofMultiOutputBulletproof = 2
     4. RangeProofPaddedBulletproof = 3
     """
-    # TODO maybe make this more explicit - also in the state
     state.rsig_grouping = rsig_data.grouping
-    state.rsig_offload = rsig_data.rsig_type > 0 and state.output_count > 2
-    state.use_bulletproof = rsig_data.rsig_type > 0
-    state.use_simple_rct = state.input_count > 1 or rsig_data.rsig_type != 0
+
+    if rsig_data.rsig_type == 0:
+        state.rsig_type = RsigType.Borromean
+    elif rsig_data.rsig_type in (1, 2, 3):
+        state.rsig_type = RsigType.Bulletproof
+    else:
+        raise ValueError("Unknown rsig type")
+
+    # unintuitively RctType.Simple is used for more inputs
+    if state.input_count > 1 or state.rsig_type == RsigType.Bulletproof:
+        state.rct_type = RctType.Simple
+    else:
+        state.rct_type = RctType.Full
+
+    if state.rsig_type == RsigType.Bulletproof and state.output_count > 2:
+        state.rsig_offload = True
+
+    _check_grouping(state)
+
+
+def _check_grouping(state: State):
+    acc = 0
+    for x in state.rsig_grouping:
+        if x is None or x <= 0:
+            raise ValueError("Invalid grouping batch")
+        acc += x
+
+    if acc != state.output_count:
+        raise ValueError("Invalid grouping")
 
 
 def _check_change(state: State, outputs: list):
@@ -230,7 +251,7 @@ def _check_change(state: State, outputs: list):
 
 async def _compute_sec_keys(state: State, tsx_data: MoneroTransactionData):
     """
-    Generate master key H(TsxData || tx_priv)
+    Generate master key H( H(TsxData || tx_priv) || rand )
     """
     import protobuf
     from apps.monero.xmr.sub.keccak_hasher import get_keccak_writer
@@ -267,7 +288,7 @@ def _process_payment_id(state: State, tsx_data: MoneroTransactionData):
     See:
     - https://github.com/monero-project/monero/blob/ff7dc087ae5f7de162131cea9dbcf8eac7c126a1/src/cryptonote_basic/tx_extra.h
     """
-    if common.is_empty(tsx_data.payment_id):
+    if not tsx_data.payment_id:
         return
 
     # encrypted payment id
@@ -275,8 +296,6 @@ def _process_payment_id(state: State, tsx_data: MoneroTransactionData):
         view_key_pub_enc = _get_key_for_payment_id_encryption(
             tsx_data.outputs, state.change_address()
         )
-        if view_key_pub_enc == crypto.NULL_KEY_ENC:
-            raise ValueError("Invalid key")  # TODO can this be removed?
 
         view_key_pub = crypto.decodepoint(view_key_pub_enc)
         payment_id_encr = _encrypt_payment_id(
@@ -332,6 +351,10 @@ def _get_key_for_payment_id_encryption(destinations: list, change_addr=None):
             )
         addr = dest.addr
         count += 1
+
+    if addr.view_public_key == crypto.NULL_KEY_ENC:
+        raise ValueError("Invalid key")
+
     return addr.view_public_key
 
 

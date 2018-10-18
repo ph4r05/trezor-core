@@ -1,6 +1,11 @@
 """
-Final message.
-Offloading tx related data, encrypted.
+Final message, signatures were already returned in the previous step.
+
+Here we return private tx keys in encrypted form using transaction specific key,
+derived from tx hash and the private spend key. The key is deterministic,
+so we can recover it just from the transaction and the spend key.
+
+The private tx keys are used in other numerous Monero features.
 """
 
 import gc
@@ -9,19 +14,13 @@ from trezor.messages.MoneroTransactionFinalAck import MoneroTransactionFinalAck
 
 from .state import State
 
-from apps.monero.controller import misc
 from apps.monero.layout import confirms
 from apps.monero.xmr import crypto
 from apps.monero.xmr.enc import chacha_poly
 
 
 async def final_msg(state: State):
-    # state.state.set_final() todo needed?
-    print("10")
-
-    # Encrypted tx keys under transaction specific key, derived from txhash and spend key.
-    # Deterministic transaction key, so we can recover it just from transaction and the spend key.
-    tx_key, salt, rand_mult = misc.compute_tx_key(
+    tx_key, salt, rand_mult = _compute_tx_key(
         state.creds.spend_key_private, state.tx_prefix_hash
     )
 
@@ -36,3 +35,15 @@ async def final_msg(state: State):
     return MoneroTransactionFinalAck(
         cout_key=None, salt=salt, rand_mult=rand_mult, tx_enc_keys=tx_enc_keys
     )
+
+
+def _compute_tx_key(spend_key_private, tx_prefix_hash):
+    salt = crypto.random_bytes(32)
+
+    rand_mult_num = crypto.random_scalar()
+    rand_mult = crypto.encodeint(rand_mult_num)
+
+    rand_inp = crypto.sc_add(spend_key_private, rand_mult_num)
+    passwd = crypto.keccak_2hash(crypto.encodeint(rand_inp) + tx_prefix_hash)
+    tx_key = crypto.compute_hmac(salt, passwd)
+    return tx_key, salt, rand_mult

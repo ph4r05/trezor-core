@@ -1,116 +1,163 @@
+from trezor.utils import obj_eq, obj_repr
+
 from apps.monero.xmr.serialize.base_types import XmrType
-from apps.monero.xmr.serialize.obj_helper import eq_obj_contents, is_type, slot_obj_dict
+from apps.monero.xmr.serialize.int_serialize import (
+    dump_uint,
+    dump_uvarint,
+    load_uint,
+    load_uvarint,
+)
+
+
+class UnicodeType(XmrType):
+    """
+    Unicode data in UTF-8 encoding.
+    """
+
+    @staticmethod
+    def dump(writer, s):
+        dump_uvarint(writer, len(s))
+        writer.write(bytes(s))
+
+    @staticmethod
+    def load(reader):
+        ivalue = load_uvarint(reader)
+        fvalue = bytearray(ivalue)
+        reader.readinto(fvalue)
+        return str(fvalue)
 
 
 class BlobType(XmrType):
     """
-    Binary data
-
-    Represented as bytearray() or a list of values in data structures.
-    Not wrapped in the BlobType, the BlobType is only a scheme descriptor.
-    Behaves in the same way as primitive types
-
-    Supports also the wrapped version (__init__, DATA_ATTR, eq, repr...),
+    Binary data, represented as bytearray.  BlobType is only a scheme
+    descriptor.  Behaves in the same way as primitive types.
     """
 
-    DATA_ATTR = "data"
     FIX_SIZE = 0
     SIZE = 0
 
-    def __eq__(self, rhs):
-        return eq_obj_contents(self, rhs)
-
-    def __repr__(self):
-        dct = slot_obj_dict(self) if hasattr(self, "__slots__") else self.__dict__
-        return "<%s: %s>" % (self.__class__.__name__, dct)
-
-
-class UnicodeType(XmrType):
-    pass
-
-
-class VariantType(XmrType):
-    """
-    Union of types, variant tags needed. is only one of the types. List in typedef, enum.
-    Wraps the variant type in order to unambiguously support variant of variants.
-    Supports also unwrapped value using type system to distinguish variants - simplifies the construction.
-    """
-
-    WRAPS_VALUE = False
-
-    def __init__(self):
-        self.variant_elem = None
-        self.variant_elem_type = None
+    @classmethod
+    def dump(cls, writer, elem: bytes):
+        if cls.FIX_SIZE:
+            if cls.SIZE != len(elem):
+                raise ValueError("Size mismatch")
+        else:
+            dump_uvarint(writer, len(elem))
+        writer.write(elem)
 
     @classmethod
-    def f_specs(cls):
-        return ()
-
-    def set_variant(self, fname, fvalue):
-        self.variant_elem = fname
-        self.variant_elem_type = fvalue.__class__
-        setattr(self, fname, fvalue)
-
-    def __eq__(self, rhs):
-        return eq_obj_contents(self, rhs)
-
-    def __repr__(self):
-        dct = slot_obj_dict(self) if hasattr(self, "__slots__") else self.__dict__
-        return "<%s: %s>" % (self.__class__.__name__, dct)
+    def load(cls, reader) -> bytearray:
+        if cls.FIX_SIZE:
+            size = cls.SIZE
+        else:
+            size = load_uvarint(reader)
+        elem = bytearray(size)
+        reader.readinto(elem)
+        return elem
 
 
 class ContainerType(XmrType):
     """
-    Array of elements
-    Represented as a real array in the data structures, not wrapped in the ContainerType.
-    The Container type is used only as a schema descriptor for serialization.
+    Array of elements, represented as a list of items.  ContainerType is only a
+    scheme descriptor.
     """
 
     FIX_SIZE = 0
     SIZE = 0
     ELEM_TYPE = None
 
+    @classmethod
+    def dump(cls, writer, elems, elem_type=None):
+        if elem_type is None:
+            elem_type = cls.ELEM_TYPE
+        if cls.FIX_SIZE:
+            if cls.SIZE != len(elems):
+                raise ValueError("Size mismatch")
+        else:
+            dump_uvarint(writer, len(elems))
+        for elem in elems:
+            elem_type.dump(writer, elem)
 
-class MessageType(XmrType):
-    def __init__(self, **kwargs):
-        for kw in kwargs:
-            setattr(self, kw, kwargs[kw])
+    @classmethod
+    def load(cls, reader, elem_type=None):
+        if elem_type is None:
+            elem_type = cls.ELEM_TYPE
+        if cls.FIX_SIZE:
+            size = cls.SIZE
+        else:
+            size = load_uvarint(reader)
+        elems = []
+        for _ in range(size):
+            elem = elem_type.load(reader)
+            elems.append(elem)
+        return elems
 
-    def __eq__(self, rhs):
-        return eq_obj_contents(self, rhs)
 
-    def __repr__(self):
-        dct = slot_obj_dict(self) if hasattr(self, "__slots__") else self.__dict__
-        return "<%s: %s>" % (self.__class__.__name__, dct)
+class VariantType(XmrType):
+    """
+    Union of types, differentiated by variant tags. VariantType is only a scheme
+    descriptor.
+    """
+
+    @classmethod
+    def dump(cls, writer, elem):
+        for field in cls.f_specs():
+            ftype = field[1]
+            if isinstance(elem, ftype):
+                break
+        else:
+            raise ValueError("Unrecognized variant: %s" % elem)
+
+        dump_uint(writer, ftype.VARIANT_CODE, 1)
+        ftype.dump(writer, elem)
+
+    @classmethod
+    def load(cls, reader):
+        tag = load_uint(reader, 1)
+        for field in cls.f_specs():
+            ftype = field[1]
+            if ftype.VARIANT_CODE == tag:
+                fvalue = ftype.load(reader)
+                break
+        else:
+            raise ValueError("Unknown tag: %s" % tag)
+        return fvalue
 
     @classmethod
     def f_specs(cls):
         return ()
 
 
-def container_elem_type(container_type, params):
+class MessageType(XmrType):
     """
-    Returns container element type
+    Message composed of fields with specific types.
     """
-    elem_type = params[0] if params else None
-    if elem_type is None:
-        elem_type = container_type.ELEM_TYPE
-    return elem_type
 
+    def __init__(self, **kwargs):
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
 
-def gen_elem_array(size, elem_type=None):
-    """
-    Generates element array of given size and initializes with given type.
-    Supports container type, used for pre-allocation before deserialization.
-    """
-    if elem_type is None or not callable(elem_type):
-        return [elem_type] * size
-    if is_type(elem_type, ContainerType):
+    __eq__ = obj_eq
+    __repr__ = obj_repr
 
-        def elem_type():
-            return []
+    @classmethod
+    def dump(cls, writer, msg):
+        defs = cls.f_specs()
+        for field in defs:
+            fname, ftype, *fparams = field
+            fvalue = getattr(msg, fname, None)
+            ftype.dump(writer, fvalue, *fparams)
 
-    res = []
-    for _ in range(size):
-        res.append(elem_type())
-    return res
+    @classmethod
+    def load(cls, reader):
+        msg = cls()
+        defs = cls.f_specs()
+        for field in defs:
+            fname, ftype, *fparams = field
+            fvalue = ftype.load(reader, *fparams)
+            setattr(msg, fname, fvalue)
+        return msg
+
+    @classmethod
+    def f_specs(cls):
+        return ()

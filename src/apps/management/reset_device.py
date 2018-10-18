@@ -26,6 +26,8 @@ async def reset_device(ctx, msg):
     # validate parameters and device state
     if msg.strength not in (128, 192, 256):
         raise wire.ProcessError("Invalid strength (has to be 128, 192 or 256 bits)")
+    if msg.display_random and (msg.skip_backup or msg.no_backup):
+        raise wire.ProcessError("Can't show internal entropy when backup is skipped")
     if storage.is_initialized():
         raise wire.UnexpectedMessage("Already initialized")
 
@@ -46,7 +48,7 @@ async def reset_device(ctx, msg):
     ent_ack = await ctx.call(EntropyRequest(), MessageType.EntropyAck)
     mnemonic = generate_mnemonic(msg.strength, internal_ent, ent_ack.entropy)
 
-    if not msg.skip_backup:
+    if not msg.skip_backup and not msg.no_backup:
         # require confirmation of the mnemonic safety
         await show_warning(ctx)
 
@@ -63,11 +65,13 @@ async def reset_device(ctx, msg):
 
     # write settings and mnemonic into storage
     storage.load_settings(label=msg.label, use_passphrase=msg.passphrase_protection)
-    storage.load_mnemonic(mnemonic=mnemonic, needs_backup=msg.skip_backup)
+    storage.load_mnemonic(
+        mnemonic=mnemonic, needs_backup=msg.skip_backup, no_backup=msg.no_backup
+    )
 
     # show success message.  if we skipped backup, it's possible that homescreen
     # is still running, uninterrupted.  restart it to pick up new label.
-    if not msg.skip_backup:
+    if not msg.skip_backup and not msg.no_backup:
         await show_success(ctx)
     else:
         workflow.restartdefault()

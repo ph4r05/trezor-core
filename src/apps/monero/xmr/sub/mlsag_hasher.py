@@ -6,18 +6,14 @@ class PreMlsagHasher:
     Iterative construction of the pre_mlsag_hash
     """
 
-    def __init__(self, state=None):
+    def __init__(self):
         from apps.monero.xmr.sub.keccak_hasher import KeccakXmrArchive
 
-        self.is_simple = state[0] if state else None
-        self.state = state[1] if state else 0
-        self.kc_master = state[2] if state else crypto.get_keccak()
-        self.rsig_hasher = state[3] if state else crypto.get_keccak()
-        self.rtcsig_hasher = None
-        if state:
-            self.rtcsig_hasher = KeccakXmrArchive(state[4]) if state[4] else None
-        else:
-            self.rtcsig_hasher = KeccakXmrArchive()
+        self.is_simple = None
+        self.state = 0
+        self.kc_master = crypto.get_keccak()
+        self.rsig_hasher = crypto.get_keccak()
+        self.rtcsig_hasher = KeccakXmrArchive()
 
     def init(self, is_simple):
         if self.state != 0:
@@ -50,11 +46,11 @@ class PreMlsagHasher:
         self.state = 4
         self.rtcsig_hasher.buffer(ecdh)
 
-    def set_out_pk_mask(self, out_pk_mask):
+    def set_out_pk_commitment(self, out_pk_commitment):
         if self.state != 4 and self.state != 5:
             raise ValueError("State error")
         self.state = 5
-        self.rtcsig_hasher.buffer(out_pk_mask)  # ECKey
+        self.rtcsig_hasher.buffer(out_pk_commitment)  # ECKey
 
     def rctsig_base_done(self):
         if self.state != 5:

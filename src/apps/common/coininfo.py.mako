@@ -1,6 +1,7 @@
 # generated from coininfo.py.mako
 # do not edit manually!
-from trezor.crypto.base58 import groestl512d_32, sha256d_32
+from trezor.crypto.base58 import blake256d_32, groestl512d_32, keccak_32, sha256d_32
+from trezor.crypto.scripts import blake256_ripemd160_digest, sha256_ripemd160_digest
 
 
 class CoinInfo:
@@ -21,7 +22,6 @@ class CoinInfo:
         segwit: bool,
         fork_id: int,
         force_bip143: bool,
-        version_group_id: int,
         bip115: bool,
         decred: bool,
         curve_name: str,
@@ -41,16 +41,25 @@ class CoinInfo:
         self.segwit = segwit
         self.fork_id = fork_id
         self.force_bip143 = force_bip143
-        self.version_group_id = version_group_id
         self.bip115 = bip115
         self.decred = decred
         self.curve_name = curve_name
         if curve_name == "secp256k1-groestl":
             self.b58_hash = groestl512d_32
             self.sign_hash_double = False
+            self.script_hash = sha256_ripemd160_digest
+        elif curve_name == "secp256k1-decred":
+            self.b58_hash = blake256d_32
+            self.sign_hash_double = False
+            self.script_hash = blake256_ripemd160_digest
+        elif curve_name == "secp256k1-smart":
+            self.b58_hash = keccak_32
+            self.sign_hash_double = False
+            self.script_hash = sha256_ripemd160_digest
         else:
             self.b58_hash = sha256d_32
             self.sign_hash_double = True
+            self.script_hash = sha256_ripemd160_digest
 
 
 # fmt: off
@@ -77,7 +86,6 @@ ATTRIBUTES = (
     ("segwit", bool),
     ("fork_id", black_repr),
     ("force_bip143", bool),
-    ("version_group_id", hexfmt),
     ("bip115", bool),
     ("decred", bool),
     ("curve_name", lambda r: repr(r.replace("_", "-"))),

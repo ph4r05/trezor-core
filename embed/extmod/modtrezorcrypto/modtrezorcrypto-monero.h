@@ -24,6 +24,9 @@
 #include "monero/monero.h"
 #include "bignum.h"
 
+/// package: trezorcrypto.monero
+
+
 
 typedef struct _mp_obj_hasher_t {
     mp_obj_base_t base;
@@ -302,7 +305,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_trezorcrypto_monero_hasher___del___obj, mod
 // Scalar defs
 //
 
-/// # mock:global
+/// mock:global
+
 /// def init256_modm(dst: Optional[Sc25519], val: Union[int, bytes, Sc25519]) -> Sc25519:
 ///     '''
 ///     Initializes Sc25519 scalar
@@ -693,7 +697,7 @@ STATIC mp_obj_t mod_trezorcrypto_monero_ge25519_double_scalarmult_vartime2(size_
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorcrypto_monero_ge25519_double_scalarmult_vartime2_obj, 4, 5, mod_trezorcrypto_monero_ge25519_double_scalarmult_vartime2);
 
-/// def ge25519_double_scalarmult_base(r: Optional[Ge25519], s: Union[Sc25519, int]) -> Ge25519:
+/// def ge25519_scalarmult_base(r: Optional[Ge25519], s: Union[Sc25519, int]) -> Ge25519:
 ///     '''
 ///     s * G
 ///     '''
@@ -716,7 +720,7 @@ STATIC mp_obj_t mod_trezorcrypto_monero_ge25519_scalarmult_base(size_t n_args, c
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorcrypto_monero_ge25519_scalarmult_base_obj, 1, 2, mod_trezorcrypto_monero_ge25519_scalarmult_base);
 
-/// def ge25519_double_scalarmult(r: Optional[Ge25519], p: Ge25519, s: Union[Sc25519, int]) -> Ge25519:
+/// def ge25519_scalarmult(r: Optional[Ge25519], p: Ge25519, s: Union[Sc25519, int]) -> Ge25519:
 ///     '''
 ///     s * p
 ///     '''

@@ -1,13 +1,18 @@
-from common import *
 import utest
-
+from common import *
 from trezor import log, loop, utils
-from apps.monero.xmr.serialize import xmrserialize as xms
+
+from apps.monero.xmr.serialize.int_serialize import (
+    dump_uint,
+    dump_uvarint,
+    load_uint,
+    load_uvarint,
+)
 from apps.monero.xmr.serialize.readwriter import MemoryReaderWriter
 from apps.monero.xmr.serialize_messages.base import ECPoint
 from apps.monero.xmr.serialize_messages.tx_prefix import (
-    TxinToKey,
     TxinGen,
+    TxinToKey,
     TxInV,
     TxOut,
     TxoutToKey,
@@ -84,8 +89,8 @@ class TestMoneroSerializer(unittest.TestCase):
         for test_num in test_nums:
             writer = MemoryReaderWriter()
 
-            xms.dump_uvarint(writer, test_num)
-            test_deser = xms.load_uvarint(MemoryReaderWriter(writer.get_buffer()))
+            dump_uvarint(writer, test_num)
+            test_deser = load_uvarint(MemoryReaderWriter(writer.get_buffer()))
 
             self.assertEqual(test_num, test_deser)
 
@@ -97,34 +102,11 @@ class TestMoneroSerializer(unittest.TestCase):
         ec_data = bytearray(range(32))
         writer = MemoryReaderWriter()
 
-        xms.dump_blob(writer, ec_data, ECPoint)
+        ECPoint.dump(writer, ec_data)
         self.assertTrue(len(writer.get_buffer()), ECPoint.SIZE)
 
-        test_deser = xms.load_blob(
-            MemoryReaderWriter(writer.get_buffer()), ECPoint
-        )
+        test_deser = ECPoint.load(MemoryReaderWriter(writer.get_buffer()))
         self.assertEqual(ec_data, test_deser)
-
-    def test_ecpoint_obj(self):
-        """
-        EC point into
-        :return:
-        """
-        ec_data = bytearray(list(range(32)))
-        ec_point = ECPoint()
-        ec_point.data = ec_data
-        writer = MemoryReaderWriter()
-
-        xms.dump_blob(writer, ec_point, ECPoint)
-        self.assertTrue(len(writer.get_buffer()), ECPoint.SIZE)
-
-        ec_point2 = ECPoint()
-        test_deser = xms.load_blob(
-            MemoryReaderWriter(writer.get_buffer()), ECPoint, elem=ec_point2
-        )
-
-        self.assertEqual(ec_data, ec_point2.data)
-        self.assertEqual(ec_point, ec_point2)
 
     def test_simple_msg(self):
         """
@@ -134,30 +116,10 @@ class TestMoneroSerializer(unittest.TestCase):
         msg = TxinGen(height=42)
 
         writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.message(msg)
+        TxinGen.dump(writer, msg)
+        test_deser = TxinGen.load(MemoryReaderWriter(writer.get_buffer()))
 
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.message(None, msg_type=TxinGen)
         self.assertEqual(msg.height, test_deser.height)
-
-    def test_simple_msg_into(self):
-        """
-        TxinGen
-        :return:
-        """
-        msg = TxinGen(height=42)
-
-        writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.message(msg)
-
-        msg2 = TxinGen()
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.message(msg2, TxinGen)
-        self.assertEqual(msg.height, test_deser.height)
-        self.assertEqual(msg.height, msg2.height)
-        self.assertEqual(msg2, test_deser)
 
     def test_txin_to_key(self):
         """
@@ -169,11 +131,9 @@ class TestMoneroSerializer(unittest.TestCase):
         )
 
         writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.message(msg)
+        TxinToKey.dump(writer, msg)
+        test_deser = TxinToKey.load(MemoryReaderWriter(writer.get_buffer()))
 
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.message(None, TxinToKey)
         self.assertEqual(msg.amount, test_deser.amount)
         self.assertEqual(msg, test_deser)
 
@@ -185,19 +145,13 @@ class TestMoneroSerializer(unittest.TestCase):
         msg1 = TxinToKey(
             amount=123, key_offsets=[1, 2, 3, 2 ** 76], k_image=bytearray(range(32))
         )
-        msg = TxInV()
-        msg.set_variant("txin_to_key", msg1)
 
         writer = MemoryReaderWriter()
-        ar1 = xms.Archive(writer, True)
-        ar1.variant(msg)
+        TxInV.dump(writer, msg1)
+        test_deser = TxInV.load(MemoryReaderWriter(writer.get_buffer()))
 
-        ar2 = xms.Archive(MemoryReaderWriter(writer.get_buffer()), False)
-        test_deser = ar2.variant(None, TxInV, wrapped=True)
-        self.assertEqual(test_deser.__class__, TxInV)
-        self.assertEqual(msg, test_deser)
-        self.assertEqual(msg.variant_elem, test_deser.variant_elem)
-        self.assertEqual(msg.variant_elem_type, test_deser.variant_elem_type)
+        self.assertEqual(test_deser.__class__, TxinToKey)
+        self.assertEqual(msg1, test_deser)
 
 
 if __name__ == "__main__":

@@ -81,21 +81,21 @@ async def sign_tx_dispatch(state, msg):
         )
 
     elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionAllInputsSetRequest:
-        from apps.monero.protocol.signing import step_05_all_in_set
+        from apps.monero.protocol.signing import step_05_all_inputs_set
 
         return (
-            await step_05_all_in_set.all_in_set(state, msg.rsig_data),
+            await step_05_all_inputs_set.all_inputs_set(state),
             (MessageType.MoneroTransactionSetOutputRequest,),
         )
 
     elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSetOutputRequest:
-        from apps.monero.protocol.signing import step_06_set_out1
+        from apps.monero.protocol.signing import step_06_set_output
 
         dst, dst_hmac, rsig_data = msg.dst_entr, msg.dst_entr_hmac, msg.rsig_data
-        del (msg)
+        del msg
 
         return (
-            await step_06_set_out1.set_out1(state, dst, dst_hmac, rsig_data),
+            await step_06_set_output.set_output(state, dst, dst_hmac, rsig_data),
             (
                 MessageType.MoneroTransactionSetOutputRequest,
                 MessageType.MoneroTransactionAllOutSetRequest,
@@ -103,19 +103,10 @@ async def sign_tx_dispatch(state, msg):
         )
 
     elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionAllOutSetRequest:
-        from apps.monero.protocol.signing import step_07_all_out1_set
-
-        # todo check TrezorTxPrefixHashNotMatchingError
-        return (
-            await step_07_all_out1_set.all_out1_set(state),
-            (MessageType.MoneroTransactionMlsagDoneRequest,),
-        )
-
-    elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionMlsagDoneRequest:
-        from apps.monero.protocol.signing import step_08_mlsag_done
+        from apps.monero.protocol.signing import step_07_all_outputs_set
 
         return (
-            await step_08_mlsag_done.mlsag_done(state),
+            await step_07_all_outputs_set.all_outputs_set(state),
             (MessageType.MoneroTransactionSignInputRequest,),
         )
 
@@ -130,8 +121,8 @@ async def sign_tx_dispatch(state, msg):
                 msg.vini_hmac,
                 msg.pseudo_out,
                 msg.pseudo_out_hmac,
-                msg.alpha_enc,
-                msg.spend_enc,
+                msg.pseudo_out_alpha,
+                msg.spend_key,
             ),
             (
                 MessageType.MoneroTransactionSignInputRequest,

@@ -17,24 +17,6 @@ class TrezorNotEnoughOutputs(TrezorError):
     pass
 
 
-def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
-    from apps.monero.xmr import crypto
-
-    if not salt:
-        salt = crypto.random_bytes(32)
-
-    if not rand_mult:
-        rand_mult_num = crypto.random_scalar()
-        rand_mult = crypto.encodeint(rand_mult_num)
-    else:
-        rand_mult_num = crypto.decodeint(rand_mult)
-
-    rand_inp = crypto.sc_add(spend_key_private, rand_mult_num)
-    passwd = crypto.keccak_2hash(crypto.encodeint(rand_inp) + tx_prefix_hash)
-    tx_key = crypto.compute_hmac(salt, passwd)
-    return tx_key, salt, rand_mult
-
-
 async def monero_get_creds(ctx, address_n=None, network_type=None):
     from apps.common import seed
     from apps.monero.xmr import crypto
@@ -58,36 +40,32 @@ async def monero_get_creds(ctx, address_n=None, network_type=None):
     return creds
 
 
-def parse_msg(bts, msg):
-    from apps.monero.xmr.serialize import xmrserialize
+def parse_msg(bts, msg_type):
     from apps.monero.xmr.serialize.readwriter import MemoryReaderWriter
 
     reader = MemoryReaderWriter(memoryview(bts))
-    ar = xmrserialize.Archive(reader, False)
-    return ar.message(msg)
+    return msg_type.load(reader)
 
 
-def dump_msg(msg, preallocate=None, msg_type=None, prefix=None):
-    from apps.monero.xmr.serialize import xmrserialize
+def dump_msg(msg, preallocate=None, prefix=None):
     from apps.monero.xmr.serialize.readwriter import MemoryReaderWriter
 
     writer = MemoryReaderWriter(preallocate=preallocate)
     if prefix:
         writer.write(prefix)
-    ar = xmrserialize.Archive(writer, True)
-    ar.message(msg, msg_type=msg_type)
+    msg_type = msg.__class__
+    msg_type.dump(writer, msg)
     return writer.get_buffer()
 
 
-def dump_msg_gc(msg, preallocate=None, msg_type=None, del_msg=False):
-    b = dump_msg(msg, preallocate=preallocate, msg_type=msg_type)
-    if del_msg:
-        del msg
+def dump_msg_gc(msg, preallocate=None, prefix=None):
+    buf = dump_msg(msg, preallocate=preallocate, prefix=None)
+    del msg
 
     import gc
 
     gc.collect()
-    return b
+    return buf
 
 
 def dump_rsig_bp(rsig):
@@ -132,3 +110,24 @@ def dump_rsig_bp(rsig):
     offset += 32
     memcpy(buff, offset, rsig.t, 0, 32)
     return buff
+
+
+def get_monero_rct_type(rct_type, rsig_type):
+    """
+    This converts our internal representation of RctType and RsigType
+    into what is used in Monero:
+    - Null = 0
+    - Full = 1
+    - Simple = 2
+    - Simple/Full with bulletproof = 3
+    """
+    from apps.monero.protocol.signing.rct_type import RctType
+    from apps.monero.protocol.signing.rsig_type import RsigType
+
+    if rsig_type == RsigType.Bulletproof:
+        return 3  # Bulletproofs
+
+    if rct_type == RctType.Simple:
+        return 2  # Simple
+    else:
+        return 1  # Full
