@@ -86,7 +86,7 @@ async def sign_input(
     )
 
     # Last pseud_out is recomputed so mask sums hold
-    if state.is_det_mask() and state.current_input_index + 1 == state.input_count:
+    if state.is_det_mask() and input_position + 1 == state.input_count:
         # Recompute the lash alpha so the sum holds
         state.mem_trace("Correcting alpha")
         alpha_diff = crypto.sc_sub(state.sumout, state.sumpouts_alphas)
