@@ -43,18 +43,26 @@ class RsigType:
     Bulletproof = 1
 
 
-def get_monero_rct_type(rct_type, rsig_type):
+class TxRctType:
     """
-    This converts our internal representation of RctType and RsigType
-    into what is used in Monero:
-    - Null = 0
-    - Full = 1
-    - Simple = 2
-    - Simple/Full with bulletproof = 3
+    Transaction type
     """
-    if rsig_type == RsigType.Bulletproof:
-        return 3  # Bulletproofs
-    if rct_type == RctType.Simple:
-        return 2  # Simple
+
+    Null = 0
+    Full = 1
+    Simple = 2
+    Bulletproof = 3
+    Bulletproof2 = 4
+
+
+def get_monero_rct_type(bp_version=1):
+    """
+    Returns transaction RctType according to the BP version.
+    Only HP9+ is supported, thus Full and Simple variants are removed.
+    """
+    if bp_version == 1:
+        return TxRctType.Bulletproof
+    elif bp_version == 2:
+        return TxRctType.Bulletproof2
     else:
-        return 1  # Full
+        raise ValueError("Unsupported BP version")

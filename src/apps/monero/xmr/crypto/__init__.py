@@ -25,8 +25,11 @@ keccak_hash = tcry.xmr_fast_hash
 keccak_hash_into = tcry.xmr_fast_hash
 
 
-def keccak_2hash(inp):
-    return keccak_hash(keccak_hash(inp))
+def keccak_2hash(inp, buff=None):
+    buff = buff if buff else bytearray(32)
+    keccak_hash_into(buff, inp)
+    keccak_hash_into(buff, buff)
+    return buff
 
 
 def compute_hmac(key, msg=None):
@@ -298,3 +301,9 @@ def check_signature(data, c, r, pub):
     tmp_c = hash_to_scalar(buff)
     res = sc_sub(tmp_c, c)
     return not sc_isnonzero(res)
+
+
+def xor8(buff, key):
+    for i in range(8):
+        buff[i] ^= key[i]
+    return buff
