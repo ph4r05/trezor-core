@@ -171,7 +171,6 @@ https://www.imperialviolet.org/2013/12/25/elligator.html
 http://elligator.cr.yp.to/
 http://elligator.cr.yp.to/elligator-20130828.pdf
 """
-ge_frombytes_vartime_check = tcry.ge25519_check
 
 #
 # Monero specific
@@ -229,7 +228,7 @@ def generate_key_derivation(pub, sec):
     Key derivation: 8*(key2*key1)
     """
     sc_check(sec)  # checks that the secret key is uniform enough...
-    ge_frombytes_vartime_check(pub)
+    check_ed25519point(pub)
     return tcry.xmr_generate_key_derivation(pub, sec)
 
 
@@ -245,9 +244,7 @@ def derive_public_key(derivation, output_index, B):
     """
     H_s(derivation || varint(output_index))G + B
     """
-    ge_frombytes_vartime_check(B)  # check some conditions on the point
     check_ed25519point(B)
-
     return tcry.xmr_derive_public_key(derivation, output_index, B)
 
 
