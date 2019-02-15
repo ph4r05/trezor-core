@@ -177,6 +177,7 @@ def _compute_tx_keys(state: State, dst_entr):
 
     else:
         mask = state.output_last_mask
+        state.output_last_mask = None
 
     state.output_masks.append(mask)
     return tx_out_key, amount_key
@@ -492,9 +493,8 @@ def _set_out_additional_keys(state: State, dst_entr):
 
     if dst_entr.is_subaddress:
         # R=r*D
-        additional_txkey = crypto.scalarmult(
-            crypto.decodepoint(dst_entr.addr.spend_public_key), additional_txkey_priv
-        )
+        additional_txkey = crypto.decodepoint(dst_entr.addr.spend_public_key)
+        crypto.scalarmult_into(additional_txkey, additional_txkey, additional_txkey_priv)
     else:
         # R=r*G
         additional_txkey = crypto.scalarmult_base(additional_txkey_priv)
