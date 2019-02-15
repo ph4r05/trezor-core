@@ -31,7 +31,7 @@ async def set_output(
 
     state.mem_trace(1, True)
 
-    await _validate(state, dst_entr, dst_entr_hmac, is_offloaded_bp)
+    dst_entr = await _validate(state, dst_entr, dst_entr_hmac, is_offloaded_bp)
     state.mem_trace(2, True)
 
     if not state.is_processing_offloaded:
@@ -135,15 +135,22 @@ async def _validate(state: State, dst_entr, dst_entr_hmac, is_offloaded_bp):
         "Offloaded extra msg while not using det masks",
     )
 
-    # HMAC check of the destination
-    dst_entr_hmac_computed = await offloading_keys.gen_hmac_tsxdest(
-        state.key_hmac, dst_entr, state.current_output_index
-    )
+    if not state.is_processing_offloaded:
+        # HMAC check of the destination
+        dst_entr_hmac_computed = await offloading_keys.gen_hmac_tsxdest(
+            state.key_hmac, dst_entr, state.current_output_index
+        )
 
-    utils.ensure(crypto.ct_equals(dst_entr_hmac, dst_entr_hmac_computed), "HMAC failed")
+        utils.ensure(crypto.ct_equals(dst_entr_hmac, dst_entr_hmac_computed), "HMAC failed")
+        del (dst_entr_hmac_computed)
 
-    del (dst_entr_hmac, dst_entr_hmac_computed)
+    else:
+        dst_entr = None
+
+    del (dst_entr_hmac)
     state.mem_trace(3, True)
+
+    return dst_entr
 
 
 def _compute_tx_keys(state: State, dst_entr):
@@ -170,7 +177,7 @@ def _compute_tx_keys(state: State, dst_entr):
     if state.is_det_mask():
         from apps.monero.xmr import monero
 
-        mask = monero.commitment_mask(crypto.encodepoint(amount_key))
+        mask = monero.commitment_mask(crypto.encodeint(amount_key))
 
     elif state.current_output_index + 1 < state.output_count:
         mask = offloading_keys.det_comm_masks(state.key_enc, state.current_output_index)
@@ -456,8 +463,10 @@ def _ecdh_encode(mask, amount, amount_key, v2=False):
     ecdh_info = EcdhTuple(mask=mask, amount=crypto.sc_init(amount))
 
     if v2:
+        amnt = ecdh_info.amount
         ecdh_info.mask = crypto.NULL_KEY_ENC
-        ecdh_info.amount = crypto.encodeint(ecdh_info.amount)
+        ecdh_info.amount = bytearray(32)
+        crypto.encodeint_into(ecdh_info.amount, amnt)
         crypto.xor8(ecdh_info.amount, _ecdh_hash(amount_key))
         return ecdh_info
 
