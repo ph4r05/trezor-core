@@ -494,7 +494,9 @@ def _set_out_additional_keys(state: State, dst_entr):
     if dst_entr.is_subaddress:
         # R=r*D
         additional_txkey = crypto.decodepoint(dst_entr.addr.spend_public_key)
-        crypto.scalarmult_into(additional_txkey, additional_txkey, additional_txkey_priv)
+        crypto.scalarmult_into(
+            additional_txkey, additional_txkey, additional_txkey_priv
+        )
     else:
         # R=r*G
         additional_txkey = crypto.scalarmult_base(additional_txkey_priv)
