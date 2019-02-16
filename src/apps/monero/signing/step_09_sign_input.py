@@ -175,11 +175,13 @@ async def sign_input(
         mg_buffer,
     )
 
-    del (input_secret_key, pseudo_out_alpha, pseudo_out_c, mlsag, ring_pubkeys)
+    del (input_secret_key, pseudo_out_alpha, mlsag, ring_pubkeys)
     state.mem_trace(5, True)
 
     from trezor.messages.MoneroTransactionSignInputAck import (
         MoneroTransactionSignInputAck,
     )
 
-    return MoneroTransactionSignInputAck(signature=mg_buffer)
+    return MoneroTransactionSignInputAck(
+        signature=mg_buffer, pseudo_out=crypto.encodepoint(pseudo_out_c)
+    )

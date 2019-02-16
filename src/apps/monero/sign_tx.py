@@ -86,7 +86,7 @@ async def sign_tx_dispatch(state, msg, keychain):
     elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSetOutputRequest:
         from apps.monero.signing import step_06_set_output
 
-        is_offloaded_bp = msg.is_offloaded_bp
+        is_offloaded_bp = bool(msg.is_offloaded_bp)
         dst, dst_hmac, rsig_data = msg.dst_entr, msg.dst_entr_hmac, msg.rsig_data
         del msg
 
