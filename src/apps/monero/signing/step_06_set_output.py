@@ -285,7 +285,9 @@ def _range_proof(state, rsig_data):
         rsig, crypto.encodeint(mask) if offload_mask else None
     )
 
-    if state.current_output_index + 1 == state.output_count and (not state.rsig_offload or state.is_processing_offloaded):
+    if state.current_output_index + 1 == state.output_count and (
+        not state.rsig_offload or state.is_processing_offloaded
+    ):
         # output masks and amounts are not needed anymore
         state.output_amounts = None
         state.output_masks = None
