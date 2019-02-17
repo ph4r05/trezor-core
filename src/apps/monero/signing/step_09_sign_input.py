@@ -92,11 +92,9 @@ async def sign_input(
         alpha_diff = crypto.sc_sub(state.sumout, state.sumpouts_alphas)
         crypto.sc_add_into(pseudo_out_alpha, pseudo_out_alpha, alpha_diff)
         pseudo_out_c = crypto.gen_commitment(pseudo_out_alpha, state.input_last_amount)
-        state.input_last_amount = None
-        state.sumpouts_alphas = None
 
     else:
-        if state.current_input_index + 1 == state.input_count:
+        if input_position + 1 == state.input_count:
             utils.ensure(
                 crypto.sc_eq(state.sumpouts_alphas, state.sumout), "Sum eq error"
             )
