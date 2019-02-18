@@ -294,18 +294,24 @@ def _process_payment_id(state: State, tsx_data: MoneroTransactionData):
     therefore the TX_EXTRA_NONCE_ENCRYPTED_PAYMENT_ID = 0x01 tag is used.
     If it is not encrypted, we use TX_EXTRA_NONCE_PAYMENT_ID = 0x00.
 
+    Since Monero release 0.13 all 2 output payments have encrypted payment ID
+    to make BC more uniform.
+
     See:
     - https://github.com/monero-project/monero/blob/ff7dc087ae5f7de162131cea9dbcf8eac7c126a1/src/cryptonote_basic/tx_extra.h
     """
+    # encrypted payment id / dummy payment ID
+    view_key_pub_enc = None
+
+    if not tsx_data.payment_id or len(tsx_data.payment_id) == 8:
+        view_key_pub_enc = _get_key_for_payment_id_encryption(
+            tsx_data, state.change_address()
+        )
+
     if not tsx_data.payment_id:
         return
 
-    # encrypted payment id
-    if len(tsx_data.payment_id) == 8:
-        view_key_pub_enc = _get_key_for_payment_id_encryption(
-            tsx_data.outputs, state.change_address()
-        )
-
+    elif len(tsx_data.payment_id) == 8:
         view_key_pub = crypto.decodepoint(view_key_pub_enc)
         payment_id_encr = _encrypt_payment_id(
             tsx_data.payment_id, view_key_pub, state.tx_priv
@@ -335,10 +341,11 @@ def _process_payment_id(state: State, tsx_data: MoneroTransactionData):
     state.extra_nonce = extra_buff
 
 
-def _get_key_for_payment_id_encryption(destinations: list, change_addr=None):
+def _get_key_for_payment_id_encryption(tsx_data: MoneroTransactionData, change_addr=None):
     """
     Returns destination address public view key to be used for
-    payment id encryption.
+    payment id encryption. If no encrypted payment ID is chosen,
+    dummy payment ID is set for better transaction uniformity if possible.
     """
     from apps.monero.xmr.addresses import addr_eq
     from trezor.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
@@ -347,19 +354,23 @@ def _get_key_for_payment_id_encryption(destinations: list, change_addr=None):
         spend_public_key=crypto.NULL_KEY_ENC, view_public_key=crypto.NULL_KEY_ENC
     )
     count = 0
-    for dest in destinations:
+    for dest in tsx_data.outputs:
         if dest.amount == 0:
             continue
         if change_addr and addr_eq(dest.addr, change_addr):
             continue
         if addr_eq(dest.addr, addr):
             continue
-        if count > 0:
+        if count > 0 and tsx_data.payment_id:
             raise ValueError(
                 "Destinations have to have exactly one output to support encrypted payment ids"
             )
         addr = dest.addr
         count += 1
+
+    # Insert dummy payment id for transaction uniformity
+    if not tsx_data.payment_id and count <= 1:
+        tsx_data.payment_id = bytearray(8)
 
     if count == 0 and change_addr:
         return change_addr.view_public_key
